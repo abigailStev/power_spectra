@@ -22,7 +22,7 @@ Written in Python 2.7 by A.L. Stevens, A.L.Stevens@uva.nl, 2013-2014
 All scientific modules imported above, as well as python 2.7, can be downloaded in the 
 Anaconda package, https://store.continuum.io/cshop/anaconda/
 I don't think argparse came with Anaconda, but I don't remember installing anything 
-special to get them.
+special to get it.
 
 """
 
