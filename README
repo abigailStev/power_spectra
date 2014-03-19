@@ -1,6 +1,6 @@
-Creating power spectra! 
+Creating a power spectrum!
 by Abigail L. Stevens
 
-powerspec.py -- to be used with event-mode RXTE data
+powerspec.py -- intended to be used with event-mode RXTE Std2 data
 
 This code comes with no guarantees.
