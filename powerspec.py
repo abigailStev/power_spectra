@@ -12,11 +12,11 @@ Makes a power spectrum out of event-mode data from RXTE.
 datafile - str - Name of FITS file with photon count rate data.
 outfile - str - Name of file that the power spectrum will be written to.
 rebinned_outfile - str - Name of file that the re-binned power spectrum will be written 
-						  to.
+	to.
 seconds - int - Number of seconds each segment of the light curve should be. Must be a 
-				 power of 2.
+	power of 2.
 rebin_const - float - Used to re-bin the data geometrically after the average power is 
-					   computed, such that bin_size[n+1] = bin_size[n] * rebin_const
+	computed, such that bin_size[n+1] = bin_size[n] * rebin_const.
 
 Written in Python 2.7 by A.L. Stevens, A.L.Stevens@uva.nl, 2013-2014
 
@@ -38,15 +38,15 @@ def power_of_two(num):
 			
 	Checks if an integer is a power of two.
 	
-	Passed: num - int - the number in question
+	Passed: num - int - The number in question.
 	
-	Returns: boolean - True if 'num' is a power of two, False if 'num' is not.
+	Returns: boolean - 'True' if 'num' is a power of two, 'False' if 'num' is not.
 	
 	"""
 	n = int(num)
-	x = 2.0
+	x = 2
 	
-	if n == 1.0:
+	if n == 1:
 		return True
 	else: 
 		while x < n and x < 2147483648:
@@ -68,35 +68,35 @@ def geometric_rebinning(rms_power_avg, rms_err_power, freq, rebin_const, length_
 	constant (rebin_const>1). 
 		
 	Passed: rms_power_avg - list of floats - Fractional rms power, averaged over all
-											   segments in the light curve
-			rms_err_power - list of floats - Error on the rms power
+				segments in the light curve.
+			rms_err_power - list of floats - Error on the rms power.
 			freq - list of floats - Frequencies (in Hz) corresponding to the power 
-									 spectrum
+				spectrum.
 			rebin_const - float - Constant >1 by which we want to re-bin the spectrum,
-								   such that bin_size[n+1] = bin_size[n] * rebin_const
+				such that bin_size[n+1] = bin_size[n] * rebin_const.
 			length_of_list - int - Length of the original power spectrum (only the 
-									positive frequencies)
+				positive frequencies).
 	
 	Returns: rebinned_freq - list of floats - Frequencies of power spectrum re-binned
-			 								   according to rebin_const
+			 	according to rebin_const.
 			 rebinned_rms_power - list of floats - Power spectrum re-binned according
-			 										 to rebin_const
-			 err_rebinned_power - list of floats - Error on the re-binned rms power
+			 	to rebin_const.
+			 err_rebinned_power - list of floats - Error on the re-binned rms power.
 	
 	"""
 	
 	## Initializing variables
-	rebinned_rms_power = []  # List of re-binned fractional rms power
-	rebinned_freq = []       # List of re-binned frequencies
-	err_rebinned_power = []  # List of error in re-binned power
-	real_index = 1.0		 # The unrounded next index in power_avg
-	int_index = 1			 # The int of real_index, added to current_m every iteration
-	current_m = 1 			 # Current index in power_avg
-	prev_m = 0				 # Previous index m
-	bin_power = 0.0			 # The power of the current re-binned bin
-	bin_freq = 0.0			 # The frequency of the current re-binned bin
-	err_bin_power2 = 0.0	 # 
-	bin_range = 0.0			 # The range of un-binned bins covered by this re-binned bin
+	rebinned_rms_power = []	# List of re-binned fractional rms power
+	rebinned_freq = []		# List of re-binned frequencies
+	err_rebinned_power = []	# List of error in re-binned power
+	real_index = 1.0		# The unrounded next index in power_avg
+	int_index = 1			# The int of real_index, added to current_m every iteration
+	current_m = 1			# Current index in power_avg
+	prev_m = 0				# Previous index m
+	bin_power = 0.0			# The power of the current re-binned bin
+	bin_freq = 0.0			# The frequency of the current re-binned bin
+	err_bin_power2 = 0.0	# The error squared on 'bin_power'
+	bin_range = 0.0			# The range of un-binned bins covered by this re-binned bin
 	
 	
 	## Looping through the length of the array power_avg, geometric bin by geometric bin, 
@@ -169,15 +169,15 @@ def each_segment(fits_data, n_bins):
 	"""
 			each_segment
 	
-	Loops through the data, selects the next segment, and generates a power spectrum for
-	that segment.
+	Loops through the data, selects the next segment, generates a power spectrum for
+	that segment, and adds it to the running power spectrum sum.
 	
 	Passed: fits_data - FITS_rec - Block of count rate data from FITS file.
 			n_bins - int - Number of time bins per segment of light curve.
 	
 	Returns: power_sum - list of floats - Sum of the power spectra for all segments.
 			 sum_rate_whole - float - Sum of the mean count rates for each segment, over
-			 				    	  the whole light curve.
+			 	the whole light curve.
 			 num_segments - int - Number of segments in the whole light curve.
 	
 	"""
@@ -254,7 +254,7 @@ def each_segment(fits_data, n_bins):
 ########################################################################################
 ## Writes power spectrum and geometrically re-binned power spectrum to two output files
 ########################################################################################
-def output(out_file, rebinned_out_file, fits_file, dt, n_bins, num_segments, \
+def output(out_file, rebinned_out_file, in_file, dt, n_bins, num_segments, \
 		   mean_rate_whole, freq, rms_power_avg, rms_err_power, rebin_const, \
 		   rebinned_freq, rebinned_rms_power, err_rebinned_power):
 	""" 
@@ -262,41 +262,40 @@ def output(out_file, rebinned_out_file, fits_file, dt, n_bins, num_segments, \
 			
 	Writes power spectrum and re-binned power spectrum to two output files.
 		
-	Passed: out_file - str - Name of output file for standard power spectrum
+	Passed: out_file - str - Name of output file for standard power spectrum.
 			rebinned_out_file - str - Name of output file for geometrically re-binned 
-									   power spectrum
-			fits_file - str - Name of FITS file containing input data
-			dt - float - Size of time bin, in seconds (must be power of 2)
-			n_bins - int - Number of time bins in a segment (must be power of 2)
-			num_segments - int - Number of segments in the light curve
+				power spectrum.
+			in_file - str - Name of file containing input data.
+			dt - float - Size of time bin, in seconds (must be power of 2).
+			n_bins - int - Number of time bins in a segment (must be power of 2).
+			num_segments - int - Number of segments in the light curve.
 			mean_rate_whole - float - Mean rate of the all light curves used.
 			freq - list of floats - Frequencies (in Hz) corresponding to the power 
-									 spectrum
+				spectrum.
 			rms_power_avg - list of floats - Fractional rms power, averaged over all 
-											  segments of the light curve and all
-											  light curves.
-			rms_err_power - list of floats - Error on avg fractional rms power
+				segments of the light curve and all light curves.
+			rms_err_power - list of floats - Error on avg fractional rms power.
 			rebin_const - float - Constant >1 by which we want to re-bin the spectrum,
-								   such that bin_size[n+1] = bin_size[n] * rebin_const
+				such that bin_size[n+1] = bin_size[n] * rebin_const.
 			rebinned_freq - list of floats - Frequencies of power spectrum re-binned
-			 								  according to rebin_const
-			rebinned_rms_power - list of floats - Power spectrum re-binned according
-			 									   to rebin_const
+			 	according to rebin_const.
+			rebinned_rms_power - list of floats - Power spectrum re-binned according to 
+				rebin_const.
 			err_rebinned_power - list of floats - Error on re-binned fractional rms 
-												   power
+				power.
 
 	Returns: nothing
 	
 	"""
 	
-	print "Output sent to %s" % out_file
+	print "Output file: %s" % out_file
 	
 	## First, the standard linear output
 	out = open (out_file, 'w')
 	
 	## Writing a header
 	out.write("#\t\tPower spectrum")
-	out.write("\n# Data: %s" % fits_file)
+	out.write("\n# Data: %s" % in_file)
 	out.write("\n# Time bin size = %.12f seconds" % dt)
 	out.write("\n# Number of bins per segment = %d" % n_bins)
 	out.write("\n# Number of segments per light curve = %d" % num_segments)
@@ -327,7 +326,7 @@ def output(out_file, rebinned_out_file, fits_file, dt, n_bins, num_segments, \
 	
 	## Writing a header
 	out.write("#\t\tPower spectrum")
-	out.write("\n# Data: %s" % fits_file)
+	out.write("\n# Data: %s" % in_file)
 	out.write("\n# Geometrically re-binned in frequency at (%lf * previous bin size)" % rebin_const)
 	out.write("\n# Corresponding un-binned output file: %s" % out_file)
 	out.write("\n# Original time bin size = %.12f seconds" % dt)
@@ -353,21 +352,19 @@ def output(out_file, rebinned_out_file, fits_file, dt, n_bins, num_segments, \
 ###################################################################################
 ## Reads in a FITS file, takes FFT of data, makes power spectrum, writes to a file
 ###################################################################################
-def main(fits_file, out_file, rebinned_out_file, num_seconds, rebin_const):
+def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const):
 	""" 
 			make_powerspec
 			
 	Reads in a FITS file, takes FFT of segments of light curve data, computes power of 
 	each segment, averages power over all segments, writes data to a file. 
 	
-	Passed: fits_file - str - Name of input file (in FITS format) of type .lc made in 
-							   HEASOFT's seextrct
-			out_file - str - Name of output file for standard power spectrum
-			rebinned_out_file - str - Name of output file for re-binned power spectrum
-			ns - int - Number of seconds each segment of the light curve should be
+	Passed: in_file - str - Name of input file.
+			out_file - str - Name of output file for standard power spectrum.
+			rebinned_out_file - str - Name of output file for re-binned power spectrum.
+			ns - int - Number of seconds each segment of the light curve should be.
 			rbc - float - Used to re-bin the data geometrically after the average 
-								  power is computed, such that 
-							      bin_size[n+1] = bin_size[n] * rebin_const
+				power is computed, such that bin_size[n+1] = bin_size[n] * rebin_const.
 	
 	Returns: nothing
 	
@@ -379,9 +376,21 @@ def main(fits_file, out_file, rebinned_out_file, num_seconds, rebin_const):
 	assert rebin_const >= 1.0 # rebin_const must be a float greater than 1
 	assert power_of_two(num_seconds) # num_seconds must be a power of 2 for the FFT -
 									 #  calls the above function 'power_of_two'
+									 
+	len_fname = len(in_file)
+	
+# 	print in_file[len_fname-3:len_fname]
+	
+	if in_file[len_fname-3:len_fname] == ".lc":
+		using_FITS = True
+	else:
+		using_FITS = False
+	
+	print using_FITS
+	
 	
 	## Opens the fits file using the Astropy library 'fits.open'.
-	hdulist = fits.open(fits_file)
+	hdulist = fits.open(in_file)
 	
 	## Read the header information from the FITS file into 'header'.
 	header = hdulist[1].header	
@@ -390,7 +399,7 @@ def main(fits_file, out_file, rebinned_out_file, num_seconds, rebin_const):
 	## Need to select which extension to use/extract.
 	## Usually, 1 is the photon count rate, 2 is the std GTI
 	## But check the header info to be safe
-	print "Reading in data from", fits_file
+	print "Input file: %s" % in_file
 	fits_data = hdulist[1].data
 	
 	hdulist.close()
@@ -400,7 +409,7 @@ def main(fits_file, out_file, rebinned_out_file, num_seconds, rebin_const):
 	n_bins = num_seconds * int(1.0 / dt)
 	
 	## Printing info on structure/binning of data.
-	print "Time bin size =", dt, "seconds"
+	print "dt = %f seconds" % dt
 # 	print "Number of bins per segment =", n_bins
 
 	power_avg, mean_rate_whole, num_segments = each_segment(fits_data, n_bins)
@@ -464,7 +473,7 @@ def main(fits_file, out_file, rebinned_out_file, num_seconds, rebin_const):
 		
 # 	print "everything's fine, num_seg = %d" % num_segments
 	## Calling the above function for writing to output files
-	output(out_file, rebinned_out_file, fits_file, dt, n_bins, num_segments, \
+	output(out_file, rebinned_out_file, in_file, dt, n_bins, num_segments, \
 		mean_rate_whole, freq, rms_power_avg, rms_err_power, rebin_const, rebinned_freq, \
 		rebinned_rms_power, err_rebinned_power)
 
@@ -480,13 +489,13 @@ def main(fits_file, out_file, rebinned_out_file, num_seconds, rebin_const):
 if __name__ == "__main__":
 	
 	parser = argparse.ArgumentParser()
-	parser.add_argument('datafile', help="The full path of the FITS file with RXTE event mode data, with time in column 1 and rate in column 2.")
+	parser.add_argument('infile', help="The full path of the input file with RXTE event mode data, with time in column 1 and rate in column 2. FITS format must have extension .lc, otherwise assumes .dat (ASCII/txt) format.")
 	parser.add_argument('outfile', help="The full path of the (ASCII/txt) file to write the frequency and power to.")
 	parser.add_argument('rebinned_outfile', help="The full path of the (ASCII/txt) file to write the geometrically re-binned frequency and power to.")
-	parser.add_argument('seconds', type=int, help="Duration of segments the light curve is broken up into, in seconds. Must be an integer power of two.")
-	parser.add_argument('rebin_const', type=float, help="Float constant by which we geometrically re-bin the power spectrum.")
+	parser.add_argument('seconds', type=int, help="Duration of segments the light curve is broken up into, in seconds. Must be an integer power of 2.")
+	parser.add_argument('rebin_const', type=float, help="Float constant by which we geometrically re-bin the averaged power spectrum.")
 	args = parser.parse_args()
 
-	main(args.datafile, args.outfile, args.rebinned_outfile, args.seconds, args.rebin_const)
+	main(args.infile, args.outfile, args.rebinned_outfile, args.seconds, args.rebin_const)
 
 ## End of program 'powerspec.py'
