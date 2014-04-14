@@ -1,6 +1,14 @@
 Creating a power spectrum!
 by Abigail L. Stevens
 
-powerspec.py -- intended to be used with event-mode RXTE Std2 data
+powerspec.py -- intended to be used with event-mode RXTE count rate data
+
+Makes a power spectrum for a light curve. Reads in count-rate data from a FITS file, 
+breaks light curve up into equal-length segments, takes power spectrum of each segment, 
+averages those power spectra, applies Leahy and fractional RMS normalizations, computes 
+sample frequency of averaged power spectrum, writes to a file. 
+
+Able to geometrically re-bin the averaged power spectrum.
+
 
 This code comes with no guarantees.
