@@ -3,6 +3,7 @@ import math
 import numpy as np
 from scipy import fftpack
 from astropy.io import fits
+import populate_lightcurve as lc
 
 """
 		powerspec.py
@@ -40,7 +41,7 @@ def power_of_two(num):
 	
 	Passed: num - int - The number in question.
 	
-	Returns: boolean - 'True' if 'num' is a power of two, 'False' if 'num' is not.
+	Returns: bool - 'True' if 'num' is a power of two, 'False' if 'num' is not.
 	
 	"""
 	n = int(num)
@@ -160,102 +161,12 @@ def geometric_rebinning(rms_power_avg, rms_err_power, freq, rebin_const, length_
 	
 	## End of function 'geometric_rebinning'
 	
-	
-	
-######################################################################
-## Generating the power spectrum for each segment of the light curve.
-######################################################################
-def each_segment(fits_data, n_bins):
-	"""
-			each_segment
-	
-	Loops through the data, selects the next segment, generates a power spectrum for
-	that segment, and adds it to the running power spectrum sum.
-	
-	Passed: fits_data - FITS_rec - Block of count rate data from FITS file.
-			n_bins - int - Number of time bins per segment of light curve.
-	
-	Returns: power_sum - list of floats - Sum of the power spectra for all segments.
-			 sum_rate_whole - float - Sum of the mean count rates for each segment, over
-			 	the whole light curve.
-			 num_segments - int - Number of segments in the whole light curve.
-	
-	"""
-	
-	## Initializations
-	i = 0 # start of bin index to make segment of data for inner for-loop
-	j = n_bins # end of bin index to make segment of data for inner for-loop
-	num_segments = 0
-	sum_rate_whole = 0
-	power_sum = [0 for x in range(n_bins)]
-		
-	## if getting a 'rate referenced before assignment' error, the program isn't making it 
-	##  into the while-loop
-	print "Extracting data from file and taking the FFT."
-	print "Segments computed:"
-	## Looping through length of data file, segment by segment, to compute power for each 
-	##  data point in the segment
-# 	print len(fits_data.field(1))
-	
-	while j < len(fits_data.field(1)): # so 'j' doesn't overstep the length of the file
-# 	while num_segments < 2:  # used for testing, so the while-loop does 1 iteration
-
-		## Initializing clean variables for each iteration of the while-loop
-		rate = []
-		power_segment = []
-		fft_data = []
-		mean_rate_segment = 0;
-	
-		## Printing out which segment we're on every x segments
-		if num_segments % 10 == 0:
-			print "\t",num_segments
-		
-		## Making a 'num_seconds'-long segment of data
-
-	#		print "Getting segment"	
-		## Extracts the second column of 'fits_data' and assigns it to 'rate'. 
-		## Don't be a dumbass. Don't use a for-loop.
-		rate = fits_data[i:j].field(1)
-			
-		## Computing the mean flux (probably in photon count rate) of the segment
-		mean_rate_segment = np.mean(rate)
-	
-		## Subtracting the mean rate off each value of 'rate'
-		##  This eliminates the spike at 0 Hz 
-		rate_sub_mean = [x - mean_rate_segment for x in rate]
-	
-		## Taking the 1-dimensional FFT of the time-domain photon count rate
-		##  Returns 'fft_data' as a complex-valued list
-		##  Using the SciPy FFT algorithm, as it is faster than NumPy for large lists
-		fft_data = fftpack.fft(rate_sub_mean)
-
-		## Computing the power
-		power_segment = np.absolute(fft_data)**2
-	
-		## Adding segments to the average
-		##  After the while-loop, average will be divided by total number of segments
-		power_sum = [a+b for a,b in zip(power_segment, power_sum)]	
-		sum_rate_whole += mean_rate_segment
-	
-		## Incrementing the counters and indices
-		i = j
-		j += n_bins
-		num_segments += 1
-		## Since the for-loop goes from i to j-1 (since that's how the range function 
-		##  works) it's ok that we set i=j here for the next round. This will not cause 
-		##  any double-counting of rows or missing rows.
-		
-		## End of while-loop
-	return power_sum, sum_rate_whole, num_segments
-	
-	## End of function 'each_segment'
-
 
 ########################################################################################
 ## Writes power spectrum and geometrically re-binned power spectrum to two output files
 ########################################################################################
 def output(out_file, rebinned_out_file, in_file, dt, n_bins, num_segments, \
-		   mean_rate_whole, freq, rms_power_avg, rms_err_power, rebin_const, \
+		   mean_rate_whole, freq, leahy_power_avg, rms_power_avg, rms_err_power, rebin_const, \
 		   rebinned_freq, rebinned_rms_power, err_rebinned_power):
 	""" 
 			output
@@ -265,13 +176,15 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, num_segments, \
 	Passed: out_file - str - Name of output file for standard power spectrum.
 			rebinned_out_file - str - Name of output file for geometrically re-binned 
 				power spectrum.
-			in_file - str - Name of file containing input data.
+			in_file - str - Full path of filename containing input data.
 			dt - float - Size of time bin, in seconds (must be power of 2).
 			n_bins - int - Number of time bins in a segment (must be power of 2).
 			num_segments - int - Number of segments in the light curve.
-			mean_rate_whole - float - Mean rate of the all light curves used.
+			mean_rate_whole - float - Mean count rate of the light curve.
 			freq - list of floats - Frequencies (in Hz) corresponding to the power 
 				spectrum.
+			leahy_power_avg - list of floats - Leahy-normalized power, averaged over all
+				segments of the light curve.
 			rms_power_avg - list of floats - Fractional rms power, averaged over all 
 				segments of the light curve and all light curves.
 			rms_err_power - list of floats - Error on avg fractional rms power.
@@ -305,12 +218,15 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, num_segments, \
 	out.write("\n# Column 1: Frequency in Hz (sample_frequency * 1.0/dt)")
 	out.write("\n# Column 2: Fractional rms normalized mean power")
 	out.write("\n# Column 3: Fractional rms normalized error on the mean power")
+	out.write("\n# Column 4: Leahy-normalized mean power")
 	out.write("\n# ")
 	
 	## Writing a table containing data computed above
 	for k in range(0, len(freq)):
 		if freq[k] >= 0:
-			out.write("\n%.8f\t%.8f\t%.8f" % (freq[k], rms_power_avg[k], rms_err_power[k]))
+# 			out.write("\n%.8f\t%.8f\t%.8f" % (freq[k], rms_power_avg[k], rms_err_power[k]))
+			out.write("\n%.8f\t%.8f\t%.8f\t%.8f" % (freq[k], rms_power_avg[k], rms_err_power[k], leahy_power_avg[k]))
+
 			## End of if-statement
 		## End of for-loop
 		
@@ -349,10 +265,46 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, num_segments, \
 	## End of function 'output'
 
 
+######################################################################
+## Generating the power spectrum for each segment of the light curve.
+######################################################################
+def each_segment(rate):
+	"""
+			each_segment
+	
+	Computes the mean count rate of this segment, the FFT of the count rate minus the 
+	mean, and the power spectrum of this segment.
+	
+	Passed: rate - Count rate for thissegment of data.
+	
+	Returns: power_segment - list of floats - Power spectra for this segment of data.
+			 mean_rate_segment - float - Mean count rate for this segment of data.
+	
+	"""
+	## Computing the mean count rate of the segment
+	mean_rate_segment = np.mean(rate)
+
+	## Subtracting the mean rate off each value of 'rate'
+	##  This eliminates the spike at 0 Hz 
+	rate_sub_mean = [x - mean_rate_segment for x in rate]
+
+	## Taking the 1-dimensional FFT of the time-domain photon count rate
+	##  Returns 'fft_data' as a complex-valued list
+	##  Using the SciPy FFT algorithm, as it is faster than NumPy for large lists
+	fft_data = fftpack.fft(rate_sub_mean)
+
+	## Computing the power
+	power_segment = np.absolute(fft_data)**2
+	
+	return power_segment, mean_rate_segment
+	
+	## End of function 'each_segment'
+	
+
 ###################################################################################
 ## Reads in a FITS file, takes FFT of data, makes power spectrum, writes to a file
 ###################################################################################
-def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const):
+def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt):
 	""" 
 			make_powerspec
 			
@@ -362,9 +314,11 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const):
 	Passed: in_file - str - Name of input file.
 			out_file - str - Name of output file for standard power spectrum.
 			rebinned_out_file - str - Name of output file for re-binned power spectrum.
-			ns - int - Number of seconds each segment of the light curve should be.
-			rbc - float - Used to re-bin the data geometrically after the average 
+			num_seconds - int - Number of seconds each segment of the light curve should 
+				be.
+			rebin_const - float - Used to re-bin the data geometrically after the average 
 				power is computed, such that bin_size[n+1] = bin_size[n] * rebin_const.
+			dt - float - Time step between bins, in seconds.
 	
 	Returns: nothing
 	
@@ -386,39 +340,159 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const):
 	else:
 		using_FITS = False
 	
-	print using_FITS
-	
-	
-	## Opens the fits file using the Astropy library 'fits.open'.
-	hdulist = fits.open(in_file)
-	
-	## Read the header information from the FITS file into 'header'.
-	header = hdulist[1].header	
-	
-	## Get the data from the FITS file.
-	## Need to select which extension to use/extract.
-	## Usually, 1 is the photon count rate, 2 is the std GTI
-	## But check the header info to be safe
 	print "Input file: %s" % in_file
-	fits_data = hdulist[1].data
-	
-	hdulist.close()
+	print "Using a FITS file:", using_FITS
 	
 	## Finds the timestep of each bin and number of bins needed for a segment of data.
-	dt = fits_data[1].field(0) - fits_data[0].field(0) # in seconds
 	n_bins = num_seconds * int(1.0 / dt)
 	
 	## Printing info on structure/binning of data.
 	print "dt = %f seconds" % dt
-# 	print "Number of bins per segment =", n_bins
+	print "n_bins = %d" % n_bins
 
-	power_avg, mean_rate_whole, num_segments = each_segment(fits_data, n_bins)
+	## Initializations
+	i = 0 # start of bin index to make segment of data for inner for-loop
+	j = n_bins # end of bin index to make segment of data for inner for-loop
+	num_segments = 0
+	sum_rate_whole = 0
+	power_sum = [0 for x in range(n_bins)]
+		
+	## if getting a 'rate referenced before assignment' error, the program isn't making it 
+	##  into the while-loop
+# 	print "Extracting data from file and taking the FFT."
+	print "Segments computed:"
+	## Looping through length of data file, segment by segment, to compute power for each 
+	##  data point in the segment
+
+	if using_FITS:
+		## Opens the fits file using the Astropy library 'fits.open'.
+		fits_hdu = fits.open(in_file)
+		## Read the header information from the FITS file into 'header'.
+		header = fits_hdu[1].header	
+		## Get the data from the FITS file.
+		## Usually, 1 is the photon count rate, 2 is the std GTI
+		## But check the header info to be safe
+		data = fits_hdu[1].data
+		fits_hdu.close()
+		
+		print "%.13f" % data[0].field(0)
+		
+		assert dt == (data[1].field(0) - data[0].field(0))
+
+		while j <= len(data.field(1)): # so 'j' doesn't overstep the length of the file
+# 		while num_segments < 1:  # used for testing, so the while-loop does 1 iteration
+
+			## Initializing clean variables for each iteration of the while-loop
+			rate = []
+			power_segment = []
+			mean_rate_segment = 0
+
+			## Printing out which segment we're on every x segments
+			if num_segments % 100 == 0:
+				print "\t",num_segments
+
+			## Making a 'num_seconds'-long segment of data
+
+# 				print "Getting segment"	
+			## Extracts the second column of 'data' and assigns it to 'rate'. 
+			## Don't be a dumbass. Don't use a for-loop.
+			rate = data[i:j].field(1)
+
+			power_segment, mean_rate_segment = each_segment(rate)
+			
+# 			print "Mean rate of segment =", mean_rate_segment
+# 			print "Power of segment =", power_segment
+
+			## Adding segments to the average
+			##  After the while-loop, average will be divided by total number of segments
+			power_sum = [a+b for a,b in zip(power_segment, power_sum)]	
+			sum_rate_whole += mean_rate_segment
+
+			## Incrementing the counters and indices
+			i = j
+			j += n_bins
+			num_segments += 1
+			## Since the for-loop goes from i to j-1 (since that's how the range function 
+			##  works) it's ok that we set i=j here for the next round. This will not cause 
+			##  any double-counting of rows or missing rows.
+
+			## End of while-loop
+		print "%.13f" % data[len(data.field(1))-1].field(0)
+	else:
+		time = []
+		energy = []
+		## Reading only the first line of data to get the start time of the file
+		with open(in_file, 'r') as fo:
+			for line in fo:
+				if line[0].strip() != "#":
+# 					print line
+					line = line.strip().split()
+					start_time = float(line[0])
+					break
 	
-	## Dividing these (currently just a sum of the segments) by the number of segments
-	##  to get an arithmetic average.
-	power_avg = [x / float(num_segments) for x in power_avg]
-	mean_rate_whole /= float(num_segments)
+		end_time = start_time + (dt * n_bins)
+		print "Start time is %.13f" % start_time
+		print "End time is %.13f" % end_time
+		assert end_time > start_time
+
+		f = open(in_file, 'r')
+		for line in f:
+			if line[0].strip() != "#":
+				line = line.strip().split()
+# 				print line
+				time.append(float(line[0]))
+# 				energy.append(int(line[1]))
+				if (time[i] + dt) > end_time:
+					rate = []
+					power_segment = []
+					mean_rate_segment = 0
+# 					print "i = %d" %i
+					rate = lc.make_lightcurve(np.asarray(time), np.asarray(energy), n_bins, dt, start_time, False)
+
+					power_segment, mean_rate_segment = each_segment(rate)
+					print "Mean rate of segment =", mean_rate_segment
+
+					print "Power segment =", power_segment
+					## Adding segments to the average
+					##  After the while-loop, average will be divided by total number of segments
+					power_sum = [a+b for a,b in zip(power_segment, power_sum)]	
+					sum_rate_whole += mean_rate_segment
+
+					start_time += (n_bins * dt)
+					end_time += (n_bins * dt)
+					time = []
+					energy = []
+					i = -1
+					num_segments += 1
+# 					print temp_lightcurve
+
+					## Printing out which segment we're on every x segments
+					if num_segments % 10 == 0:
+						print "\t",num_segments
+					if num_segments == 1:
+						break
+				i += 1
+# 	 			if num_segments == 10: 
+# 	 				break
+# 				## End of 'if the line is not a comment'
+# 			## End of for-loop 
+# 		
+# 		f.close()
+# 	
+# 		time = np.asarray(time)
+# 		rate = np.asarray(rate)
+	
+	
+	print "Total number of segments =", num_segments
+
+	
+	## Dividing sums by the number of segments to get an arithmetic average.
+	power_avg = [x / float(num_segments) for x in power_sum]
+	mean_rate_whole = sum_rate_whole / float(num_segments)
 # 	print "Power spectrum computed"
+
+# 	print "Power_avg =", power_avg
+	print "Mean rate whole =", mean_rate_whole
 	
 	## Making integer time bins to plot against. Giving 't' as many data points as 'rate'
 	t = np.arange(n_bins)
@@ -446,9 +520,11 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const):
 	
 	## Fractional rms normalization
 	rms_power_avg = [(2.0 * x * dt / ((1.0/dt) * num_seconds) / mean_rate_whole**2) - (2.0 / mean_rate_whole) for x in power_avg]
-# 	other_rms_power_avg = [(x / mean_rate_whole) - (2.0 / mean_rate_whole) for x in leahy_power_avg] # This gives the same values as the above line, as checked below
+	other_rms_power_avg = [(x / mean_rate_whole) - (2.0 / mean_rate_whole) for x in leahy_power_avg] # This gives the same values as the above line, as checked below
 	
-	"""
+	print "Mean value of Leahy power =", np.mean(leahy_power_avg)
+	
+# 	"""
 	## Troubleshooting -- not a problem!
 	x = 0
 	while x < len(rms_power_avg):
@@ -456,7 +532,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const):
 			print "Issue:", x, rms_power_avg[x], other_rms_power_avg[x]
 		x += 1
 	print ""
-	"""
+# 	"""
 
 	## Error on fractional rms power -- don't trust this equation (yet)
 	rms_err_power = [(2.0 * x * dt / ((1.0/dt) * num_seconds) / mean_rate_whole**2) for x in err_power]
@@ -468,13 +544,12 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const):
 	length_of_list = len(power_avg)
 	
 	## Calling the above function for geometric re-binning
-	rebinned_freq, rebinned_rms_power, err_rebinned_power = geometric_rebinning(\
-		rms_power_avg, rms_err_power, freq, rebin_const, length_of_list)
+# 	rebinned_freq, rebinned_rms_power, err_rebinned_power = geometric_rebinning(\
+# 		rms_power_avg, rms_err_power, freq, rebin_const, length_of_list)
 		
-# 	print "everything's fine, num_seg = %d" % num_segments
 	## Calling the above function for writing to output files
 	output(out_file, rebinned_out_file, in_file, dt, n_bins, num_segments, \
-		mean_rate_whole, freq, rms_power_avg, rms_err_power, rebin_const, rebinned_freq, \
+		mean_rate_whole, freq, leahy_power_avg, rms_power_avg, rms_err_power, rebin_const, rebinned_freq, \
 		rebinned_rms_power, err_rebinned_power)
 
 	
@@ -494,8 +569,9 @@ if __name__ == "__main__":
 	parser.add_argument('rebinned_outfile', help="The full path of the (ASCII/txt) file to write the geometrically re-binned frequency and power to.")
 	parser.add_argument('seconds', type=int, help="Duration of segments the light curve is broken up into, in seconds. Must be an integer power of 2.")
 	parser.add_argument('rebin_const', type=float, help="Float constant by which we geometrically re-bin the averaged power spectrum.")
+	parser.add_argument('dt', type=float, help="Time step between bins, in seconds.")
 	args = parser.parse_args()
 
-	main(args.infile, args.outfile, args.rebinned_outfile, args.seconds, args.rebin_const)
+	main(args.infile, args.outfile, args.rebinned_outfile, args.seconds, args.rebin_const, args.dt)
 
 ## End of program 'powerspec.py'
