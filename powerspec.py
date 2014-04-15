@@ -26,6 +26,8 @@ Anaconda package, https://store.continuum.io/cshop/anaconda/
 I don't think argparse came with Anaconda, but I don't remember installing anything 
 special to get it.
 
+I wrote populate_lightcurve, but it's still buggy, so I'm not putting it up yet.
+
 """
 
 #################################################
