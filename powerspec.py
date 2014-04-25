@@ -58,12 +58,12 @@ def power_of_two(num):
 		while x < n and x < 2147483648:
 			x *= 2
 		return n == x
-		
 	## End of function 'power_of_two'
 
-#################################################################
+########################################################################
 ## From https://docs.python.org/2/library/itertools.html#recipes
-#################################################################
+##  Used when reading lines in the file so I can peek at the next line.
+########################################################################
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
     a, b = itertools.tee(iterable)
@@ -119,7 +119,6 @@ def geometric_rebinning(rms_power_avg, rms_err_power, freq, rebin_const, orig_le
 	## Equations for frequency, power, and error on power are from Adam's thesis
 	while current_m < orig_length_of_list:
 # 	while current_m < 400: # used for debugging
-		
 		## Initializing clean variables for each iteration of the while-loop
 		bin_power = 0.0 # the averaged power at each index of rebinned_power
 		err_bin_power2 = 0.0 # the square of the errors on the powers in this bin
@@ -170,7 +169,6 @@ def geometric_rebinning(rms_power_avg, rms_err_power, freq, rebin_const, orig_le
 		## End of while-loop
 		
 	return rebinned_freq, rebinned_rms_power, err_rebinned_power
-	
 	## End of function 'geometric_rebinning'
 	
 
@@ -311,8 +309,8 @@ def each_segment(rate):
 	power_segment = np.absolute(fft_data)**2
 	
 	return power_segment, mean_rate_segment
-	
 	## End of function 'each_segment'
+
 
 ######################################################################################
 ## Opens the FITS file light curve, reads the count rate for a segment, calls 
@@ -351,7 +349,7 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator):
 	
 	sum_rate_whole = 0
 	power_sum = [0 for x in range(n_bins)]
-	num_segments = 0
+	num_segments = 1
 
 	i = 0 # start of bin index to make segment of data for inner for-loop
 	j = n_bins # end of bin index to make segment of data for inner for-loop
@@ -359,7 +357,6 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator):
 	assert dt == (data[1].field(0) - data[0].field(0))
 
 	while j <= len(data.field(1)): ## so 'j' doesn't overstep the length of the file
-# 		while num_segments < 1: ## For testing purposes only, so the loop does 1 iteration
 
 		## Initializing clean variables for each iteration of the while-loop
 		rate = []
@@ -381,7 +378,10 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator):
 
 		power_sum = [a+b for a,b in zip(power_segment, power_sum)]	
 		sum_rate_whole += mean_rate_segment
-
+		
+# 		if num_segments == 1: # For testing purposes
+# 			break
+		
 		## Incrementing the counters and indices
 		i = j
 		j += n_bins
@@ -430,7 +430,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator):
 	energy = []
 	sum_rate_whole = 0
 	power_sum = [0 for x in range(n_bins)]
-	num_segments = 0
+	num_segments = 1
 	
 	## Reading only the first line of data to get the start time of the file
 	with open(in_file, 'r') as fo:
@@ -503,7 +503,7 @@ def make_powerspec(in_file, n_bins, dt):
 			make_powerspec
 			
 	Opens the file, reads in the count rate, calls 'each_segment' to create power 
-	spectrum.
+	spectrum. Split into 'fits_powerspec' and 'ascii_powerspec' for easier readability.
 	
 	Passed: in_file - str - Name of input file with time in column 1 and rate in column 2. 
 				FITS format must have extension .lc or .fits, otherwise assumes .dat 
@@ -540,12 +540,9 @@ def make_powerspec(in_file, n_bins, dt):
 	else:
 		print_iterator = int(10)	
 	
-	## if getting a 'rate referenced before assignment' error, the program isn't making it 
-	##  into the while-loop
-# 	print "Extracting data from file and taking the FFT."
-	print "Segments computed:"
 	## Looping through length of data file, segment by segment, to compute power for each 
 	##  data point in the segment
+	print "Segments computed:"
 
 	if using_FITS:
 		power_sum, sum_rate_whole, num_segments = fits_powerspec(in_file, n_bins, dt, print_iterator)
@@ -555,7 +552,6 @@ def make_powerspec(in_file, n_bins, dt):
 		## End of 'if/else file is FITS' 
 	
 	return power_sum, sum_rate_whole, num_segments
-	
 	## End of function 'make_powerspec'
 	
 
@@ -639,8 +635,6 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt):
 		(2.0 / mean_rate_whole) for x in power_avg]
 # 	other_rms_power_avg = [(x / mean_rate_whole) - (2.0 / mean_rate_whole) for x in \
 # 		leahy_power_avg] ## This gives the same values as the above line
-	
-	
 	"""
 	## Troubleshooting -- not a problem!
 	x = 0
@@ -666,10 +660,8 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt):
 		mean_rate_whole, freq, leahy_power_avg, rms_power_avg, rms_err_power, \
 		rebin_const, rebinned_freq, rebinned_rms_power, err_rebinned_power)
 
-	
 	## End of function 'main'
-
-
+	
 
 #################################################
 ## Parsing cmd-line arguments and calling 'main'
