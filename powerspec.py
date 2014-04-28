@@ -214,66 +214,54 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, num_s
 	
 	print "Standard output file: %s" % out_file
 	
-	## First, the standard linear output
-	out = open (out_file, 'w')
+	with open(out_file, 'w') as out:
+		out.write("#\t\tPower spectrum")
+		out.write("\n# Data: %s" % in_file)
+		out.write("\n# Time bin size = %.12f seconds" % dt)
+		out.write("\n# Number of bins per segment = %d" % n_bins)
+		out.write("\n# Number of segments per light curve = %d" % num_segments)
+		out.write("\n# Duration of light curve used = %d seconds" % (num_segments * n_bins * dt))
+		out.write("\n# Mean count rate = %.8f, over whole light curve" % mean_rate_whole)
+		out.write("\n# Nyquist frequency = %.4f" % nyquist_freq)
+		out.write("\n# ")
+		out.write("\n# Column 1: Frequency in Hz (sample_frequency * 1.0/dt)")
+		out.write("\n# Column 2: Fractional rms normalized mean power")
+		out.write("\n# Column 3: Fractional rms normalized error on the mean power")
+		out.write("\n# Column 4: Leahy-normalized mean power")
+		out.write("\n# ")
+		for k in range(0, len(freq)):
+			if freq[k] >= 0:
+	# 			out.write("\n%.8f\t%.8f\t%.8f" % (freq[k], rms_power_avg[k], rms_err_power[k]))
+				out.write("\n%.8f\t%.8f\t%.8f\t%.8f" % (freq[k], rms_power_avg[k], rms_err_power[k], leahy_power_avg[k]))
+				## End of if-statement
+			## End of for-loop
+		## End of with-block
 	
-	## Writing a header
-	out.write("#\t\tPower spectrum")
-	out.write("\n# Data: %s" % in_file)
-	out.write("\n# Time bin size = %.12f seconds" % dt)
-	out.write("\n# Number of bins per segment = %d" % n_bins)
-	out.write("\n# Number of segments per light curve = %d" % num_segments)
-	out.write("\n# Duration of light curve used = %d seconds" % (num_segments * n_bins * dt))
-	out.write("\n# Mean count rate = %.8f, over whole light curve" % mean_rate_whole)
-	out.write("\n# Nyquist frequency = %.4f" % nyquist_freq)
-	out.write("\n# ")
-	out.write("\n# Column 1: Frequency in Hz (sample_frequency * 1.0/dt)")
-	out.write("\n# Column 2: Fractional rms normalized mean power")
-	out.write("\n# Column 3: Fractional rms normalized error on the mean power")
-	out.write("\n# Column 4: Leahy-normalized mean power")
-	out.write("\n# ")
-	
-	## Writing a table containing data computed above
-	for k in range(0, len(freq)):
-		if freq[k] >= 0:
-# 			out.write("\n%.8f\t%.8f\t%.8f" % (freq[k], rms_power_avg[k], rms_err_power[k]))
-			out.write("\n%.8f\t%.8f\t%.8f\t%.8f" % (freq[k], rms_power_avg[k], rms_err_power[k], leahy_power_avg[k]))
-
-			## End of if-statement
-		## End of for-loop
-		
-	out.close()
-	
-	## Now outputting the geometric-binned data
-	##  Need to do this separately since it has a different number of data points from
-	##  the standard un-binned power spectrum.
+	## Now outputting the geometric-binned data -- Need to do this separately since it 
+	##  has a different number of data points from the standard un-binned power spectrum.
 	
 	print "Re-binned output file: %s" % rebinned_out_file
 	
-	out = open (rebinned_out_file, 'w')
-	
-	## Writing a header
-	out.write("#\t\tPower spectrum")
-	out.write("\n# Data: %s" % in_file)
-	out.write("\n# Geometrically re-binned in frequency at (%lf * previous bin size)" % rebin_const)
-	out.write("\n# Corresponding un-binned output file: %s" % out_file)
-	out.write("\n# Original time bin size = %.12f seconds" % dt)
-	out.write("\n# Duration of light curve used = %d seconds" % (num_segments * n_bins * dt))
-	out.write("\n# Mean count rate = %.8f, over whole light curve" % mean_rate_whole)
-	out.write("\n# ")
-	out.write("\n# Column 1: Frequency in Hz")
-	out.write("\n# Column 2: Fractional rms normalized mean power")
-	out.write("\n# Column 3: Error in fractional rms normalized mean power")
-	out.write("\n# ")
-	
-	## Writing a table containing data computed above
-	for k in range(0, len(rebinned_freq)):
-		if rebinned_freq[k] >= 0:
-			out.write("\n%.8f\t%.8f\t%.8f" % (rebinned_freq[k], rebinned_rms_power[k], err_rebinned_power[k]))
-			## End of if-statement
-		## End of for-loop
-	
-	out.close()
+	with open(rebinned_out_file, 'w') as out:
+		out.write("#\t\tPower spectrum")
+		out.write("\n# Data: %s" % in_file)
+		out.write("\n# Geometrically re-binned in frequency at (%lf * previous bin size)" % rebin_const)
+		out.write("\n# Corresponding un-binned output file: %s" % out_file)
+		out.write("\n# Original time bin size = %.12f seconds" % dt)
+		out.write("\n# Duration of light curve used = %d seconds" % (num_segments * n_bins * dt))
+		out.write("\n# Mean count rate = %.8f, over whole light curve" % mean_rate_whole)
+		out.write("\n# ")
+		out.write("\n# Column 1: Frequency in Hz")
+		out.write("\n# Column 2: Fractional rms normalized mean power")
+		out.write("\n# Column 3: Error in fractional rms normalized mean power")
+		out.write("\n# ")
+		for k in range(0, len(rebinned_freq)):
+			if rebinned_freq[k] >= 0:
+				out.write("\n%.8f\t%.8f\t%.8f" % (rebinned_freq[k], rebinned_rms_power[k], err_rebinned_power[k]))
+				## End of if-statement
+			## End of for-loop
+		## End of with-block
+		
 	## End of function 'output'
 
 
