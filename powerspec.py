@@ -261,7 +261,6 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, num_s
 				## End of if-statement
 			## End of for-loop
 		## End of with-block
-		
 	## End of function 'output'
 
 
@@ -522,11 +521,11 @@ def make_powerspec(in_file, n_bins, dt):
 	print "Using a FITS file:", using_FITS
 	
 	if n_bins == 32768:
-		print_iterator = int(50)
+		print_iterator = int(5)
 	elif n_bins < 32768:
-		print_iterator = int(100)
+		print_iterator = int(10)
 	else:
-		print_iterator = int(10)	
+		print_iterator = int(1)	
 	
 	## Looping through length of data file, segment by segment, to compute power for each 
 	##  data point in the segment
