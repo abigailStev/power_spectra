@@ -21,6 +21,7 @@ seconds - int - Number of seconds each segment of the light curve should be. Mus
 	power of 2.
 rebin_const - float - Used to re-bin the data geometrically after the average power is 
 	computed, such that bin_size[n+1] = bin_size[n] * rebin_const.
+dt - int - Multiple of 1/8192 seconds for timestep between bins.
 
 Written in Python 2.7 by A.L. Stevens, A.L.Stevens@uva.nl, 2013-2014
 
@@ -29,7 +30,7 @@ Anaconda package, https://store.continuum.io/cshop/anaconda/
 I don't think argparse came with Anaconda, but I don't remember installing anything 
 special to get it.
 
-populate_lightcurve is still buggy, so I'm not putting it up on GitHub yet.
+populate_lightcurve is not on GitHub yet.
 
 """
 
@@ -130,20 +131,30 @@ def geometric_rebinning(rms_power_avg, rms_err_power, freq, rebin_const, orig_le
 			## Adding power data points (tiny linear bins) within a geometric bin
 			##  After the while-loop, this will be divided by total number of data points
 			bin_power += rms_power_avg[k]
+			
+# 			if rms_power_avg[k] <= 0:
+# 				print "k = ", k
+# 				print "rms[k] = ", rms_power_avg[k]
+
 			## Also computing error in bin power squared, for error computation later
 			err_bin_power2 += rms_err_power[k] ** 2
 			## End of for-loop
 		
 		## Determining the range of indices this specific geometric bin covers
 		bin_range = abs(current_m - prev_m)
-		
 		## Dividing bin_power (currently just a sum of the data points) by the number 
 		##  of points to get an arithmetic average
 		bin_power /= float(bin_range)
 		
 		## Computing the mean frequency of a geometric bin
 		bin_freq = ((freq[current_m] - freq[prev_m]) / bin_range) + freq[prev_m]
-		
+
+# 		if bin_power <= 0:
+# 			print "Index:", current_m
+# 			print "Bin range:", bin_range
+# 			print "Bin freq:", bin_freq
+# 			print "Bin power:", bin_power
+
 		## If there's only one data point in the geometric bin, there's no need to take
 		##  an average. This also prevents it from skipping the first data point.
 		if bin_range == 1:
@@ -217,7 +228,7 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, num_s
 	with open(out_file, 'w') as out:
 		out.write("#\t\tPower spectrum")
 		out.write("\n# Data: %s" % in_file)
-		out.write("\n# Time bin size = %.12f seconds" % dt)
+		out.write("\n# Time bin size = %.13f seconds" % dt)
 		out.write("\n# Number of bins per segment = %d" % n_bins)
 		out.write("\n# Number of segments per light curve = %d" % num_segments)
 		out.write("\n# Duration of light curve used = %d seconds" % (num_segments * n_bins * dt))
@@ -247,7 +258,7 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, num_s
 		out.write("\n# Data: %s" % in_file)
 		out.write("\n# Geometrically re-binned in frequency at (%lf * previous bin size)" % rebin_const)
 		out.write("\n# Corresponding un-binned output file: %s" % out_file)
-		out.write("\n# Original time bin size = %.12f seconds" % dt)
+		out.write("\n# Original time bin size = %.13f seconds" % dt)
 		out.write("\n# Duration of light curve used = %d seconds" % (num_segments * n_bins * dt))
 		out.write("\n# Mean count rate = %.8f, over whole light curve" % mean_rate_whole)
 		out.write("\n# ")
@@ -429,8 +440,8 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator):
 				break
 						
 	end_time = start_time + (dt * n_bins)
-# 	print "Start time of file is %.13f" % start_time
-# 	print "End time of first seg is %.13f" % end_time
+# 	print "Start time of file is %.15f" % start_time
+# 	print "End time of first seg is %.15f" % end_time
 	assert end_time > start_time
 		
 	with open(in_file, 'r') as f:
@@ -447,35 +458,43 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator):
 # 					print line
 
 				if (float(next_line[0]) > end_time): ## Triggered at end of a segment
-					power_segment = []
-					mean_rate_segment = 0
-					rate_2d, rate_1d = lc.make_lightcurve(np.asarray(time), np.asarray(energy), n_bins, dt, start_time)
-					power_segment, mean_rate_segment = each_segment(list(rate_1d))
-				
-					assert len(power_segment) == n_bins
+# 					print "Here1"
+					print len(time)
+					if len(time) > 0:
+# 						print "\tHere2"
+						print "Start time = %.13f" % start_time
+						print "End time = %.13f" % end_time
+						power_segment = []
+						mean_rate_segment = 0
+						rate_2d, rate_1d = lc.make_lightcurve(np.asarray(time), np.asarray(energy), n_bins, dt, start_time)
+						power_segment, mean_rate_segment = each_segment(list(rate_1d))
+# 						print "\t", mean_rate_segment
+						assert len(power_segment) == n_bins
 
-					power_sum = [a+b for a,b in zip(power_segment, power_sum)]	
-					sum_rate_whole += mean_rate_segment
+						power_sum = [a+b for a,b in zip(power_segment, power_sum)]	
+						sum_rate_whole += mean_rate_segment
 				
-					## Printing out which segment we're on every x segments
-					if num_segments % print_iterator == 0:
-						print "\t", num_segments
-# 					if num_segments == 1:  ## For testing purposes only
-# 						break
+						## Printing out which segment we're on every x segments
+						if num_segments % print_iterator == 0:
+							print "\t", num_segments
+	# 					if num_segments == 1:  ## For testing purposes only
+	# 						break
 						
-					## Incrementing counters and loop control variables.
+						## Incrementing counters and loop control variables.
+						time = []
+						energy = []
+						num_segments += 1
+						## End of 'if there are counts in this segment'
+						
 					start_time += (n_bins * dt)
 					end_time += (n_bins * dt)
-					time = []
-					energy = []
-					num_segments += 1
 					
 					## End of 'if we're at the end of a segment'
 				## End of 'if the line is not a comment'
 			## End of for-loop 
 		## End of with-block
 		
-	return power_sum, sum_rate_whole, num_segments
+	return power_sum, sum_rate_whole, num_segments-1
 	## End of function 'ascii_powerspec'
 	
 
@@ -561,7 +580,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt):
 				be. Must be a power of 2.
 			rebin_const - float - Used to re-bin the data geometrically after the average 
 				power is computed, such that bin_size[n+1] = bin_size[n] * rebin_const.
-			dt - float - Time step between bins, in seconds. Must be a power of 2.
+			dt - int - Multiple of 1/8192 seconds for timestep between bins.
 	
 	Returns: nothing
 	
@@ -570,12 +589,17 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt):
 	
 	## Idiot checks, to ensure that our assumptions hold
 	assert num_seconds > 0 # num_seconds must be a positive integer
+	assert power_of_two(num_seconds)
 	assert rebin_const >= 1.0 # rebin_const must be a float greater than 1
-	
+	print dt
+	t_res = 1.0/8192.0
+	print "%.13f" %t_res
+	dt = dt * t_res
+	print "%.13f" % dt
 	n_bins = num_seconds * int(1.0 / dt)
 	nyquist_freq = 1.0 /(2.0 * dt)
 	
-	print "dt = %f seconds" % dt
+	print "dt = %.13f seconds" % dt
 	print "n_bins = %d" % n_bins
 	print "Nyquist freq = ", nyquist_freq
 	
@@ -639,8 +663,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt):
 	orig_length_of_list = len(power_avg)
 	
 	## Calling the above function for geometric re-binning
-	rebinned_freq, rebinned_rms_power, err_rebinned_power = geometric_rebinning(\
-		rms_power_avg, rms_err_power, freq, rebin_const, orig_length_of_list)
+	rebinned_freq, rebinned_rms_power, err_rebinned_power = geometric_rebinning(rms_power_avg, rms_err_power, freq, rebin_const, orig_length_of_list)
 		
 	## Calling the above function for writing to output files
 	output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
@@ -667,7 +690,7 @@ if __name__ == "__main__":
 		help="Duration of segments the light curve is broken up into, in seconds. Must be an integer power of 2.")
 	parser.add_argument('rebin_const', type=float, \
 		help="Float constant by which we geometrically re-bin the averaged power spectrum.")
-	parser.add_argument('dt', type=float, help="Time step between bins, in seconds.")
+	parser.add_argument('dt', type=int, help="Multiple of 1/8192 seconds for timestep between bins.")
 	args = parser.parse_args()
 
 	main(args.infile, args.outfile, args.rebinned_outfile, args.seconds, args.rebin_const, args.dt)
