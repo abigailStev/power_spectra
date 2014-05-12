@@ -591,11 +591,11 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt):
 	assert num_seconds > 0 # num_seconds must be a positive integer
 	assert power_of_two(num_seconds)
 	assert rebin_const >= 1.0 # rebin_const must be a float greater than 1
-	print dt
+# 	print dt
 	t_res = 1.0/8192.0
-	print "%.13f" %t_res
+# 	print "%.13f" %t_res
 	dt = dt * t_res
-	print "%.13f" % dt
+# 	print "%.13f" % dt
 	n_bins = num_seconds * int(1.0 / dt)
 	nyquist_freq = 1.0 /(2.0 * dt)
 	
