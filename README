@@ -3,10 +3,11 @@ by Abigail L. Stevens
 
 powerspec.py -- intended to be used with event-mode RXTE count rate data
 
-Makes a power spectrum for a light curve. Reads in count rate data from a FITS file, 
-breaks light curve up into equal-length segments, takes power spectrum of count rate for 
-each segment, averages those power spectra, applies Leahy and fractional RMS 
-normalizations, computes sample frequency of averaged power spectrum, writes to a file. 
+Makes a power spectrum for a light curve. Reads in count rate data from a FITS file (or 
+event list from an ASCII/txt/dat file and populates it), breaks light curve up into
+equal-length segments, takes power spectrum of count rate for each segment, averages 
+those power spectra, applies Leahy and fractional RMS normalizations, computes sample 
+frequency of averaged power spectrum, writes to a file. 
 
 Able to geometrically re-bin the averaged power spectrum.
 
