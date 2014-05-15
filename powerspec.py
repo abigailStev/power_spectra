@@ -477,8 +477,8 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator):
 						## Printing out which segment we're on every x segments
 						if num_segments % print_iterator == 0:
 							print "\t", num_segments
-						if num_segments == 1:  ## For testing purposes only
-							break
+# 						if num_segments == 1:  ## For testing purposes only
+# 							break
 						
 						## Incrementing counters and loop control variables.
 						time = []
@@ -540,9 +540,9 @@ def make_powerspec(in_file, n_bins, dt):
 	print "Using a FITS file:", using_FITS
 	
 	if n_bins == 32768:
-		print_iterator = int(1)
-	elif n_bins < 32768:
 		print_iterator = int(10)
+	elif n_bins < 32768:
+		print_iterator = int(20)
 	else:
 		print_iterator = int(1)	
 	
