@@ -459,11 +459,11 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator):
 
 				if (float(next_line[0]) > end_time): ## Triggered at end of a segment
 # 					print "Here1"
-					print len(time)
+# 					print len(time)
 					if len(time) > 0:
 # 						print "\tHere2"
-						print "Start time = %.13f" % start_time
-						print "End time = %.13f" % end_time
+# 						print "Start time = %.13f" % start_time
+# 						print "End time = %.13f" % end_time
 						power_segment = []
 						mean_rate_segment = 0
 						rate_2d, rate_1d = lc.make_lightcurve(np.asarray(time), np.asarray(energy), n_bins, dt, start_time)
@@ -477,8 +477,8 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator):
 						## Printing out which segment we're on every x segments
 						if num_segments % print_iterator == 0:
 							print "\t", num_segments
-	# 					if num_segments == 1:  ## For testing purposes only
-	# 						break
+						if num_segments == 1:  ## For testing purposes only
+							break
 						
 						## Incrementing counters and loop control variables.
 						time = []
@@ -494,7 +494,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator):
 			## End of for-loop 
 		## End of with-block
 		
-	return power_sum, sum_rate_whole, num_segments-1
+	return power_sum, sum_rate_whole, num_segments
 	## End of function 'ascii_powerspec'
 	
 
@@ -540,7 +540,7 @@ def make_powerspec(in_file, n_bins, dt):
 	print "Using a FITS file:", using_FITS
 	
 	if n_bins == 32768:
-		print_iterator = int(5)
+		print_iterator = int(1)
 	elif n_bins < 32768:
 		print_iterator = int(10)
 	else:
