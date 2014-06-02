@@ -442,7 +442,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 	if start_time is -99:
 		print "\tERROR: Start time of data was not read in. Exiting."
 		exit()
-	start_time = 277473713.3784303665161
+# 	start_time = 277473713.3784303665161
 	end_time = start_time + (dt * n_bins)
 # 	print "Start time of file is %.15f" % start_time
 # 	print "End time of first seg is %.15f" % end_time
