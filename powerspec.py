@@ -218,7 +218,7 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, num_s
 	with open(out_file, 'w') as out:
 		out.write("#\t\tPower spectrum")
 		out.write("\n# Data: %s" % in_file)
-		out.write("\n# Time bin size = %.13f seconds" % dt)
+		out.write("\n# Time bin size = %.21f seconds" % dt)
 		out.write("\n# Number of bins per segment = %d" % n_bins)
 		out.write("\n# Number of segments per light curve = %d" % num_segments)
 		out.write("\n# Duration of light curve used = %d seconds" \
@@ -248,10 +248,10 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, num_s
 	with open(rebinned_out_file, 'w') as out:
 		out.write("#\t\tPower spectrum")
 		out.write("\n# Data: %s" % in_file)
-		out.write("\n# Geometrically re-binned in frequency at (%lf * previous bin size)\
+		out.write("\n# Geometrically re-binned in frequency at (%.4f * previous bin size)\
 				  " % rebin_const)
 		out.write("\n# Corresponding un-binned output file: %s" % out_file)
-		out.write("\n# Original time bin size = %.13f seconds" % dt)
+		out.write("\n# Original time bin size = %.21f seconds" % dt)
 		out.write("\n# Duration of light curve used = %d seconds" \
 				  % (num_segments * n_bins * dt))
 		out.write("\n# Mean count rate = %.8f, over whole light curve" % mean_rate_whole)
@@ -285,8 +285,9 @@ def each_segment(rate):
 	
 	""" 
 	pass
-	print "Non-zero rate indices:", np.where(rate != 0)
-	print "Num of non-zero rates:", np.shape(np.where(rate != 0))
+# 	print "Non-zero rate indices:", np.where(rate != 0)
+# 	print "Num of non-zero rates:", np.shape(np.where(rate != 0))
+
 	## Computing the mean count rate of the segment
 	mean_rate = np.mean(rate)
 # 	print "Shape of rate:", np.shape(rate)
@@ -351,18 +352,20 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 	while j <= len(data.field(1)):  # so 'j' doesn't overstep the length of the file
 		
 		num_segments += 1
-		print "\tNew Segment; i=%d, j=%d" % (i,j)
+# 		print "\tNew Segment; i=%d, j=%d" % (i,j)
 
 		## Extracts the second column of 'data' and assigns it to 'rate'. 
 		time = data[i:j].field(0)
 		rate = data[i:j].field(1)
-
+		
+# 		print "Start time of segment: %.21f" % time[i]
+# 		print "End time of segment: %.21f" % time[j-1]
+# 		print "i = 51: t = %.21f, r = %d" % (time[51], rate[51])
+# 		print "i = 52: t = %.21f, r = %d" % (time[52], rate[52])
+# 		print "i = 53: t = %.21f, r = %d" % (time[53], rate[53])
+		
 		power_segment, mean_rate_segment = each_segment(rate)
-		print "Start time of segment: %.13f" % data[i].field(0)
-		print "End time of segment: %.13f" % data[j-1].field(0)
-		print "4 times: %.13f, %.13f, %.13f, %.13f" \
-			% (time[50], time[51], time[52], time[53])
-		print "rate:", rate[50:54]
+		
 # 		print "Mean rate of segment =", mean_rate_segment
 # 		print "Power of segment =", power_segment
 # 		print "Power segment: ", power_segment[0:4]
@@ -404,6 +407,8 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 	the light curve, calls 'each_segment' to create a power spectrum, adds power spectra
 	over all segments.
 	
+	Assumes that all event times have been corrected with TIMEZERO, and GTI-filtered.
+	
 	Passed: in_file - Name of (ASCII/txt/dat) event list, still to be 'populated'.
 			n_bins - Number of integer bins per segment. Must be a power of 2.
 			dt - Desired time step between bins of populated light curve, in 
@@ -427,37 +432,41 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 	sum_rate_whole = 0
 	power_sum = np.zeros(n_bins, dtype=np.float64)
 	num_segments = 0
-	start_time = -99
 	
 	lightcurve = np.asarray([])
 	
 	## Reading only the first line of data to get the start time of the file
-	with open(in_file, 'r') as fo:
-		for line in fo:
-			if line[0].strip() != "#":
-# 				print line
-				line = line.strip().split()
-				start_time = float(line[0])
-				break
-	if start_time is -99:
-		print "\tERROR: Start time of data was not read in. Exiting."
-		exit()
-# 	start_time = 277473713.3784303665161
+# 	start_time = -99
+# 	with open(in_file, 'r') as fo:
+# 		for line in fo:
+# 			if line[0].strip() != "#":
+# # 				print line
+# 				line = line.strip().split()
+# 				start_time = np.float64(line[0])
+# 				break
+# 	if start_time is -99:
+# 		print "\tERROR: Start time of data was not read in. Exiting."
+# 		exit()
+	
+	start_time = 277473713.378430366516113281250
+	# somehow need to get start time either from GTI or from first event in list, 
+	# whichever comes later
+	
 	end_time = start_time + (dt * n_bins)
-# 	print "Start time of file is %.15f" % start_time
-# 	print "End time of first seg is %.15f" % end_time
+# 	print "Start time of file is %.21f" % start_time
+# 	print "End time of first seg is %.21f" % end_time
 	assert end_time > start_time
 		
 	with open(in_file, 'r') as f:
 		for line, next_line in pairwise(f):
-			if line[0].strip() != "#" and line[0].strip().split() >= start_time:  # If the line is not a comment
-# 				print line.strip().split()[0]
+			if line[0].strip() != "#" and float(line.strip().split()[0]) >= start_time:  # If the line is not a comment
 				line = line.strip().split()
 				next_line = next_line.strip().split()
-				current_time = float(line[0])
-				current_chan = int(line[1])
+				current_time = np.float64(line[0])
+				current_chan = np.int8(line[1])
+				current_pcu = np.int8(line[2])
 				
-				if current_chan == 2:  # Only want PCU2 here
+				if current_pcu == 2:  # Only want PCU2 here
 					time.append(current_time)
 					energy.append(current_chan)
 # 					print line
@@ -468,9 +477,9 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 # 					print "Length of time array at end of segment:", len(time)
 					if len(time) > 0:
 						num_segments += 1
-						print "\tNew Segment"
-						print "Start time of segment: %.13f" % start_time
-						print "End time of segment: %.13f" % end_time
+# 						print "\tNew Segment"
+# 						print "Start time of segment: %.21f" % start_time
+# 						print "End time of segment: %.21f" % end_time
 						rate_2d, rate_1d = lc.make_lightcurve(np.asarray(time), np.asarray(energy), n_bins, dt, start_time)
 # 						print "Shape of rate_1d:", np.shape(rate_1d)
 						lightcurve = np.concatenate((lightcurve, rate_1d))
@@ -503,6 +512,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 						energy = []
 						
 						if (short_run == True) and (num_segments == 1):  # For testing
+							np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
 							break
 						## End of 'if there are counts in this segment'
 
@@ -514,8 +524,6 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 			## End of for-loop 
 		## End of with-block
 	
-	np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
-		
 	return power_sum, sum_rate_whole, num_segments
 	## End of function 'ascii_powerspec'
 	
@@ -612,14 +620,14 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt_mult
 	assert rebin_const >= 1.0  # rebin_const must be a float greater than 1
 
 	t_res = 1.0 / 8192.0
- 	#print "%.13f" %t_res
+ 	#print "%.21f" %t_res
 	dt = dt_mult * t_res
 	#print dt
-	#print "%.13f" % dt
+	#print "%.21f" % dt
 	n_bins = num_seconds * int(1.0 / dt)
 	nyquist_freq = 1.0 / (2.0 * dt)
 	
-	print "dt = %.13f seconds" % dt
+	print "dt = %.21f seconds" % dt
 	print "n_bins = %d" % n_bins
 	print "Nyquist freq = ", nyquist_freq
 	
