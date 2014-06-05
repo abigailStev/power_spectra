@@ -21,6 +21,7 @@ seconds - Number of seconds each segment of the light curve should be. Must be a
 rebin_const - Used to re-bin the data geometrically after the average power is computed, 
 	such that bin_size[n+1] = bin_size[n] * rebin_const.
 dt_mult - Multiple of 1/8192 seconds for the timestep between bins.
+short_run - 1 if only computing one segment for testing, 0 if computing all segments.
 
 Written in Python 2.7 by A.L. Stevens, A.L.Stevens@uva.nl, 2013-2014
 
@@ -436,21 +437,19 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 	lightcurve = np.asarray([])
 	
 	## Reading only the first line of data to get the start time of the file
-# 	start_time = -99
-# 	with open(in_file, 'r') as fo:
-# 		for line in fo:
-# 			if line[0].strip() != "#":
-# # 				print line
-# 				line = line.strip().split()
-# 				start_time = np.float64(line[0])
-# 				break
-# 	if start_time is -99:
-# 		print "\tERROR: Start time of data was not read in. Exiting."
-# 		exit()
+	start_time = -99
+	with open(in_file, 'r') as fo:
+		for line in fo:
+			if line[0].strip() != "#":
+# 				print line
+				line = line.strip().split()
+				start_time = np.float64(line[0])
+				break
+	if start_time is -99:
+		print "\tERROR: Start time of data was not read in. Exiting."
+		exit()
 	
-	start_time = 277473713.378430366516113281250
-	# somehow need to get start time either from GTI or from first event in list, 
-	# whichever comes later
+# 	start_time = 277473713.378430366516113281250  ## To start at same time as fits.lc, for comparison
 	
 	end_time = start_time + (dt * n_bins)
 # 	print "Start time of file is %.21f" % start_time
