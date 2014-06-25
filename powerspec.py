@@ -468,11 +468,9 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 				if current_pcu == 2:  # Only want PCU2 here
 					time.append(current_time)
 					energy.append(current_chan)
-# 					print line
 
 				if float(next_line[0]) > end_time:  # Triggered at end of a segment
 # 					print next_line[0], end_time
-# 					print "Here1"
 # 					print "Length of time array at end of segment:", len(time)
 					if len(time) > 0:
 						num_segments += 1
