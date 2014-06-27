@@ -3,9 +3,9 @@ import math
 import numpy as np
 from scipy import fftpack
 from astropy.io import fits
-import itertools
 
 import populate_lightcurve as lc
+import tools
 
 """
 		powerspec.py
@@ -29,47 +29,9 @@ The scientific modules imported above, as well as python 2.7, can be downloaded 
 Anaconda package, https://store.continuum.io/cshop/anaconda/
 
 populate_lightcurve is not on GitHub yet.
+tools is available at https://github.com/abigailStev/power_spectra
 
 """
-
-#########################################################################################
-def power_of_two(num):
-	"""
-			power_of_two
-			
-	Checks if 'num' is a power of 2 (1 <= num < 2147483648 )
-	
-	Passed: num - The number in question.
-	
-	Returns: bool - 'True' if 'num' is a power of two, 'False' if 'num' is not.
-	
-	"""
-	pass
-	n = int(num)
-	x = 2
-	
-	if n == 1:
-		return True
-	else: 
-		while x < n and x < 2147483648:
-			x *= 2
-		return n == x
-	## End of function 'power_of_two'
-
-
-#########################################################################################
-def pairwise(iterable):
-	"""
-	s -> (s0,s1), (s1,s2), (s2, s3), ...
-	https://docs.python.org/2/library/itertools.html#recipes
-	Used when reading lines in the file so I can peek at the next line.
-	"""
-	pass
-	a, b = itertools.tee(iterable)
-	next(b, None)
-	return itertools.izip(a, b)
-	## End of function 'pairwise'
-
 
 #########################################################################################
 def geometric_rebinning(freq, rms_power_avg, rms_err_power, rebin_const, 
@@ -111,7 +73,7 @@ def geometric_rebinning(freq, rms_power_avg, rms_err_power, rebin_const,
 	
 	## Looping through the length of the array power_avg, geometric bin by geometric bin, 
 	##  to compute the average power and frequency of that geometric bin
-	## Equations for frequency, power, and error on power are from Adam's thesis
+	## Equations for frequency, power, and error on power are from Adam Ingram's thesis
 	while current_m < orig_length_of_list:
 # 	while current_m < 100: # used for debugging
 		## Initializing clean variables for each iteration of the while-loop
@@ -143,8 +105,6 @@ def geometric_rebinning(freq, rms_power_avg, rms_err_power, rebin_const,
 		if bin_range == 1:
 			bin_power = rms_power_avg[prev_m]
 			bin_freq = freq[prev_m]
-# 		print "Bin power = ",bin_power
-# 		print "Bin freq =", bin_freq
 		
 		## Appending values to arrays
 		rebinned_rms_power.append(bin_power)
@@ -451,7 +411,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 	assert end_time > start_time
 		
 	with open(in_file, 'r') as f:
-		for line, next_line in pairwise(f):
+		for line, next_line in tools.pairwise(f):
 			if line[0].strip() != "#" and float(line.strip().split()[0]) >= start_time:  # If the line is not a comment
 				line = line.strip().split()
 				next_line = next_line.strip().split()
@@ -545,8 +505,8 @@ def make_powerspec(in_file, n_bins, dt, short_run):
 	"""
 	pass
 	
-	assert power_of_two(n_bins)
-	assert power_of_two(1.0 / dt)
+	assert tools.power_of_two(n_bins)
+	assert tools.power_of_two(1.0 / dt)
 	
 	len_fname = len(in_file)
 		
@@ -611,7 +571,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt_mult
 	
 	## Idiot checks, to ensure that our assumptions hold
 	assert num_seconds > 0  # num_seconds must be a positive integer
-	assert power_of_two(num_seconds)
+	assert tools.power_of_two(num_seconds)
 	assert rebin_const >= 1.0  # rebin_const must be a float greater than 1
 
 	t_res = 1.0 / 8192.0
