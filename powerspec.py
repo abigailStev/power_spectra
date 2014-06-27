@@ -72,8 +72,8 @@ def pairwise(iterable):
 
 
 #########################################################################################
-def geometric_rebinning(rms_power_avg, rms_err_power, freq, rebin_const,
-                        orig_length_of_list):
+def geometric_rebinning(freq, rms_power_avg, rms_err_power, rebin_const, 
+						orig_length_of_list):
 	"""
 			geometric_rebinning
 			
@@ -113,7 +113,7 @@ def geometric_rebinning(rms_power_avg, rms_err_power, freq, rebin_const,
 	##  to compute the average power and frequency of that geometric bin
 	## Equations for frequency, power, and error on power are from Adam's thesis
 	while current_m < orig_length_of_list:
-# 	while current_m < 400: # used for debugging
+# 	while current_m < 100: # used for debugging
 		## Initializing clean variables for each iteration of the while-loop
 		bin_power = 0.0  # the averaged power at each index of rebinned_power
 		err_bin_power2 = 0.0  # the square of the errors on the powers in this bin
@@ -125,11 +125,6 @@ def geometric_rebinning(rms_power_avg, rms_err_power, freq, rebin_const,
 			## Adding power data points (tiny linear bins) within a geometric bin
 			##  After the while-loop, this will be divided by total number of data points
 			bin_power += rms_power_avg[k]
-			
-# 			if rms_power_avg[k] <= 0:
-# 				print "k = ", k
-# 				print "rms[k] = ", rms_power_avg[k]
-
 			## Also computing error in bin power squared, for error computation later
 			err_bin_power2 += rms_err_power[k] ** 2
 			## End of for-loop
@@ -143,22 +138,18 @@ def geometric_rebinning(rms_power_avg, rms_err_power, freq, rebin_const,
 		## Computing the mean frequency of a geometric bin
 		bin_freq = ((freq[current_m] - freq[prev_m]) / bin_range) + freq[prev_m]
 
-# 		if bin_power <= 0:
-# 			print "Index:", current_m
-# 			print "Bin range:", bin_range
-# 			print "Bin freq:", bin_freq
-# 			print "Bin power:", bin_power
-
 		## If there's only one data point in the geometric bin, there's no need to take
 		##  an average. This also prevents it from skipping the first data point.
 		if bin_range == 1:
 			bin_power = rms_power_avg[prev_m]
 			bin_freq = freq[prev_m]
+# 		print "Bin power = ",bin_power
+# 		print "Bin freq =", bin_freq
 		
 		## Appending values to arrays
 		rebinned_rms_power.append(bin_power)
 		rebinned_freq.append(bin_freq)
-		## Computing error in geometric bin -- equation from Adam's thesis
+		## Computing error in geometric bin -- equation from Adam Ingram's thesis
 		err_rebinned_power.append(math.sqrt(err_bin_power2) / float(bin_range))
 		
 		## Incrementing for the next iteration of the loop
@@ -166,10 +157,13 @@ def geometric_rebinning(rms_power_avg, rms_err_power, freq, rebin_const,
 		real_index *= rebin_const
 		int_index = int(round(real_index))
 		current_m += int_index
-		
 		## Since the for-loop goes from prev_m to current_m-1 (since that's how the range 
 		##  function works) it's ok that we set prev_m = current_m here for the next 
 		##  round. This will not cause any double-counting of bins or missing bins.
+		bin_range = None
+		bin_freq = None
+		bin_power = None
+		err_bin_power2 = None
 		
 		## End of while-loop
 		
@@ -508,7 +502,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 						time = []
 						energy = []
 						
-						if (short_run == True) and (num_segments == 1):  # For testing
+						if (short_run == True) and (num_segments == 2):  # For testing
 							np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
 							break
 						## End of 'if there are counts in this segment'
@@ -569,8 +563,12 @@ def make_powerspec(in_file, n_bins, dt, short_run):
 		print_iterator = int(10)
 	elif n_bins < 32768:
 		print_iterator = int(20)
+	elif n_bins >= 2097152:
+		print_iterator = int(1)	
+	elif n_bins >= 1048576:
+		print_iterator = int(2)
 	else:
-		print_iterator = int(5)	
+		print_iterator = int(5)
 	
 	## Looping through length of data file, segment by segment, to compute power for each 
 	##  data point in the segment
@@ -670,7 +668,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt_mult
 	
 	
 	rebinned_freq, rebinned_rms_power, err_rebinned_power = \
-		geometric_rebinning(rms_power_avg, rms_err_power, freq, rebin_const,
+		geometric_rebinning(freq, rms_power_avg, rms_err_power, rebin_const,
 		                    int(len(power_avg)))
 		
 	output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, num_segments,
