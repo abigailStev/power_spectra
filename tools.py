@@ -7,6 +7,7 @@ import itertools
 		tools.py
 
 This has not been rigorously tested.
+There is no 'main' to this program; only helper methods to import and be called.
 
 To assign the returned value to a variable in a bash script (in the directory containing
 tools.py): 
@@ -78,10 +79,10 @@ def read_obs_time(in_file):
 		
 		read_obs_time
 		
-	Read the total observation time from the text header of the ccf file.
+	Read the total observation time from the header of a text file.
 	
 	Passed: in_file - str - Name of (ASCII/txt/dat) input file with observation duration 
-			in line 5 (starting at 0) of the header.
+				in line 5 (starting at 0) of the header.
 		
 	Returns: nothing
 	
