@@ -10,7 +10,7 @@ import tools
 """
 		powerspec.py
 
-Makes a power spectrum out of event-mode data from RXTE.
+Makes a power spectrum out of an event-mode data file from RXTE.
 
 Arguments:
 datafile - Name of FITS file with photon count rate data.
@@ -21,7 +21,7 @@ seconds - Number of seconds each segment of the light curve should be. Must be a
 rebin_const - Used to re-bin the data geometrically after the average power is computed, 
 	such that bin_size[n+1] = bin_size[n] * rebin_const.
 dt_mult - Multiple of 1/8192 seconds for the timestep between bins.
-short_run - 1 if only computing one segment for testing, 0 if computing all segments.
+test - 1 if only computing one segment for testing, 0 if computing all segments.
 
 Written in Python 2.7 by A.L. Stevens, A.L.Stevens@uva.nl, 2013-2014
 
@@ -267,7 +267,7 @@ def each_segment(rate):
 
 
 #########################################################################################
-def fits_powerspec(in_file, n_bins, dt, print_iterator, short_run):
+def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 	"""
 			fits_powerspec
 	
@@ -279,7 +279,7 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 			dt - Time step between bins, in seconds. Must be a power of 2.
 			print_iterator - Prints out which segment we're on every 'print_iterator' 
 				segments, to keep track of progress.
-			short_run - True if computing one segment, False if computing all.
+			test - True if computing one segment, False if computing all.
 	
 	Returns: power_sum - Sum of power spectra for all segments of data from this input 
 				file.
@@ -334,7 +334,7 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 		if num_segments % print_iterator == 0:
 			print "\t", num_segments
 			
-		if (short_run == True) and (num_segments == 1):  # For testing
+		if (test == True) and (num_segments == 1):  # For testing
 			break
 			
 		rate = None
@@ -354,7 +354,7 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 
 
 #########################################################################################
-def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
+def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 	"""
 			ascii_powerspec
 		
@@ -370,7 +370,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 				seconds. Must be a power of 2.
 			print_iterator - Prints out which segment we're on every 'print_iterator' 
 				segments, to keep track of progress.
-			short_run - True if computing a few segments, False if computing all.
+			test - True if computing a few segments, False if computing all.
 	
 	Returns: power_sum - Sum of power spectra for all segments of data from this input 
 				file.
@@ -462,7 +462,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 						time = []
 						energy = []
 						
-						if (short_run == True) and (num_segments == 2):  # For testing
+						if (test == True) and (num_segments == 2):  # For testing
 							np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
 							break
 						## End of 'if there are counts in this segment'
@@ -480,7 +480,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run):
 	
 
 #########################################################################################
-def make_powerspec(in_file, n_bins, dt, short_run):
+def make_powerspec(in_file, n_bins, dt, test):
 	"""
 			make_powerspec
 			
@@ -494,7 +494,7 @@ def make_powerspec(in_file, n_bins, dt, short_run):
 				(ASCII/txt) format.
 			n_bins - Number of integer bins per segment. Must be a power of 2.
 			dt - Time step between bins, in seconds. Must be a power of 2.
-			short_run - True if computing few segments, False if computing all.
+			test - True if computing few segments, False if computing all.
 	
 	Returns: power_sum - Sum of power spectra for all segments of data from this input 
 				file.
@@ -536,10 +536,9 @@ def make_powerspec(in_file, n_bins, dt, short_run):
 
 	if using_fits:
 		power_sum, sum_rate_whole, num_segments = fits_powerspec(in_file, n_bins, dt,
-                                                                 print_iterator, 
-                                                                 short_run)
+                                                                 print_iterator, test)
 	else:
-		power_sum, sum_rate_whole, num_segments = ascii_powerspec(in_file, n_bins, dt, print_iterator, short_run)
+		power_sum, sum_rate_whole, num_segments = ascii_powerspec(in_file, n_bins, dt, print_iterator, test)
 	
 		## End of 'if/else file is fits format'
 	
@@ -548,7 +547,7 @@ def make_powerspec(in_file, n_bins, dt, short_run):
 	
 	
 #########################################################################################
-def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt_mult, short_run):
+def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt_mult, test):
 	""" 
 			main
 	
@@ -562,7 +561,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt_mult
 			rebin_const - Used to re-bin the data geometrically after the average power 
 				is computed, such that bin_size[n+1] = bin_size[n] * rebin_const.
 			dt_mult - Multiple of 1/8192 seconds for timestep between bins.
-			short_run - True if computing 1 segment, False if computing all.
+			test - True if computing 1 segment, False if computing all.
 	
 	Returns: nothing
 	
@@ -573,6 +572,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt_mult
 	assert num_seconds > 0  # num_seconds must be a positive integer
 	assert tools.power_of_two(num_seconds)
 	assert rebin_const >= 1.0  # rebin_const must be a float greater than 1
+	assert dt_mult >= 1
 
 	t_res = 1.0 / 8192.0
  	#print "%.21f" %t_res
@@ -584,29 +584,24 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt_mult
 	
 	print "dt = %.21f seconds" % dt
 	print "n_bins = %d" % n_bins
-	print "Nyquist freq = ", nyquist_freq
+	print "Nyquist freq =", nyquist_freq
 	
-	power_sum, sum_rate_whole, num_segments = make_powerspec(in_file, n_bins, dt, short_run)
+	power_sum, sum_rate_whole, num_segments = make_powerspec(in_file, n_bins, dt, test)
 	print "\tTotal number of segments =", num_segments
 
 	## Dividing sums by the number of segments to get an arithmetic average.
 	power_avg = power_sum / float(num_segments)
 	assert int(len(power_avg)) == n_bins
-	print "Power avg:", power_avg[0:4]
 	mean_rate_whole = sum_rate_whole / float(num_segments)
-
-	print "Mean rate whole =", mean_rate_whole
+	print "Mean count rate over whole lightcurve =", mean_rate_whole
 
 	## Computing the FFT sample frequencies (in Hz)
 	t = np.arange(n_bins)
-# 	print "t.shape[-1] =", t.shape[-1]
 	freq = fftpack.fftfreq(n_bins, d=dt)
 
 	## Ensuring that we're only using and saving the positive frequency values 
 	##  (and associated power values)
 	max_index = np.argmax(freq)
-	print "Index of max freq:", max_index
-# 	print "Type of 'max_index':", type(max_index)
 	freq = freq[0:max_index + 1]  # because it slices at end-1, and we want to include max
 	power_avg = power_avg[0:max_index + 1]
 	
@@ -620,11 +615,11 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt_mult
 	## Fractional rms normalization
 	rms_power_avg = (2.0 * power_avg * dt / ((1.0 / dt) * num_seconds) / \
 		mean_rate_whole ** 2) - (2.0 / mean_rate_whole)
-	print "Mean value of rms power =", np.mean(rms_power_avg)
+# 	print "Mean value of rms power =", np.mean(rms_power_avg)
 	
 	## Error on fractional rms power -- don't trust this equation (yet)
 	rms_err_power = (2.0 * err_power * dt / ((1.0 / dt) * num_seconds) / mean_rate_whole ** 2)
-	print "rms power avg:", rms_power_avg[0:4]
+# 	print "rms power avg:", rms_power_avg[0:4]
 	
 	
 	rebinned_freq, rebinned_rms_power, err_rebinned_power = \
@@ -635,15 +630,6 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt_mult
            mean_rate_whole, freq, rms_power_avg, rms_err_power, leahy_power_avg, 
            rebin_const, rebinned_freq, rebinned_rms_power, err_rebinned_power)
 	
-	freq401 = np.where(freq == 401)
-	print "Bin at 401 Hz:", freq401
-	print "RMS power at 401 Hz:", rms_power_avg[freq401]
-	maxpow = np.argmax(rms_power_avg)
-	print "Bin of max power:", maxpow
-	print "Freq of max power:", freq[maxpow],"Hz"
-	print "Max rms power:", rms_power_avg[maxpow]
-	
-	
 	## End of function 'main'
 	
 
@@ -653,47 +639,22 @@ if __name__ == "__main__":
 	"""
 	Parsing cmd-line arguments and calling 'main'
 	"""
-	parser = argparse.ArgumentParser()
-	parser.add_argument('infile',
-		                help="The full path of the input file with RXTE event mode data, \
-		                with time in column 1 and rate in column 2. FITS format must \
-		                have extension .lc or .fits, otherwise assumes .dat (ASCII/txt) \
-		                format.")
-	parser.add_argument('outfile',
-		                help="The full path of the (ASCII/txt) file to write the \
-		                frequency and power to.")
-	parser.add_argument('rebinned_outfile',
-		                help="The full path of the (ASCII/txt) file to write the \
-		                geometrically re-binned \
-		                frequency and power to.")
-	parser.add_argument('seconds', type=int,
-		                help="Duration of segments the light curve is broken up into, \
-		                in seconds. Must be an integer power of 2.")
-	parser.add_argument('rebin_const', type=float,
-                        help="Float constant by which we geometrically re-bin the \
-                        averaged power spectrum.")
-	parser.add_argument('dt_mult', type=int,
-		                help="Multiple of 1/8192 seconds for timestep between bins.")
-	parser.add_argument('short_run', type=int,
-		                help="1 if only computing one segment for testing, 0 if \
-		                computing all segments.")
+	parser = argparse.ArgumentParser(description='Makes a power spectrum out of an event-\
+									 mode data file from RXTE.')
+	parser.add_argument('-i', '--infile', required=True, dest='infile', help='The full path of the input file with RXTE event-mode data, with time in column 1 and rate in column 2. FITS format must have extension .lc or .fits, otherwise assumes .dat (ASCII/txt) format.')
+	parser.add_argument('-o', '--outfile', required=True, dest='outfile', help='The full path of the (ASCII/txt) file to write the frequency and power to.')
+	parser.add_argument('-b', '--rebinned_outfile', required=True, dest='rebinned_outfile', help='The full path of the (ASCII/txt) file to write the geometrically re-binned frequency and power to.')
+	parser.add_argument('-n', '--num_seconds', type=int, default=1, dest='num_seconds', help='Number of seconds in each segment that the light curve is broken up into. Must be a power of 2.')
+	parser.add_argument('-c', '--rebin_const', type=float, default=1.01, dest='rebin_const', help='Float constant by which we re-bin the averaged power spectrum.')
+	parser.add_argument('-m', '--dt_mult', type=int, default=1, dest='dt_mult', help='Multiple of 1/8192 seconds for timestep between bins.')
+	parser.add_argument('-t', '--test', type=int, default=0, choices=xrange(0,2), dest='test', help='1 if only computing one segment for testing, 0 if computing all segments.')
 	args = parser.parse_args()
 	
-	assert args.short_run == 1 or args.short_run == 0
-	if args.short_run == 1: 
-		short_run = True
-	else:
-		short_run = False
+	test = False
+	if args.test == 1: 
+		test = True
 		
-	print "infile =", args.infile
-	print "outfile =", args.outfile
-	print "rebinned_outfile =", args.rebinned_outfile
-	print "seconds =", args.seconds
-	print "rebin_const =", args.rebin_const
-	print "dt_mult =", args.dt_mult
-	print "short run?", short_run
-		
-	main(args.infile, args.outfile, args.rebinned_outfile, args.seconds,
-         args.rebin_const, args.dt_mult, short_run)
+	main(args.infile, args.outfile, args.rebinned_outfile, args.num_seconds, \
+		args.rebin_const, args.dt_mult, test)
 
 ## End of program 'powerspec.py'
