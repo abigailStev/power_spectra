@@ -240,20 +240,13 @@ def each_segment(rate):
 	
 	""" 
 	pass
-# 	print "Non-zero rate indices:", np.where(rate != 0)
-# 	print "Num of non-zero rates:", np.shape(np.where(rate != 0))
 
 	## Computing the mean count rate of the segment
 	mean_rate = np.mean(rate)
-# 	print "Shape of rate:", np.shape(rate)
+
 	## Subtracting the mean rate off each value of 'rate'
 	##  This eliminates the spike at 0 Hz 
 	rate_sub_mean = rate - mean_rate
-# 	print "Rate:", rate[0:4]
-# 	print "Mean:", mean_rate
-# 	print "Mean-subtracted rate:", rate_sub_mean[0:4]
-# 	print "Shape of rate_sub_mean:", np.shape(rate_sub_mean)
-	## good until here!
 	
 	## Taking the 1-dimensional FFT of the time-domain photon count rate
 	##  Using the SciPy FFT algorithm, as it is faster than NumPy for large lists
@@ -313,24 +306,11 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 		time = data[i:j].field(0)
 		rate = data[i:j].field(1)
 		
-# 		print "Start time of segment: %.21f" % time[i]
-# 		print "End time of segment: %.21f" % time[j-1]
-# 		print "i = 51: t = %.21f, r = %d" % (time[51], rate[51])
-# 		print "i = 52: t = %.21f, r = %d" % (time[52], rate[52])
-# 		print "i = 53: t = %.21f, r = %d" % (time[53], rate[53])
-		
 		power_segment, mean_rate_segment = each_segment(rate)
 		
-# 		print "Mean rate of segment =", mean_rate_segment
-# 		print "Power of segment =", power_segment
-# 		print "Power segment: ", power_segment[0:4]
-# 		print "Power sum before: ", power_sum[0:4]
 		power_sum += power_segment
-# 		print "Power sum after: ", power_sum[0:4]
-# 		print sum_rate_whole
-# 		print mean_rate_segment
 		sum_rate_whole += mean_rate_segment
-# 		print sum_rate_whole
+
 		if num_segments % print_iterator == 0:
 			print "\t", num_segments
 			
@@ -424,30 +404,20 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 					energy.append(current_chan)
 
 				if float(next_line[0]) > end_time:  # Triggered at end of a segment
-# 					print next_line[0], end_time
-# 					print "Length of time array at end of segment:", len(time)
 					if len(time) > 0:
 						num_segments += 1
 # 						print "\tNew Segment"
 # 						print "Start time of segment: %.21f" % start_time
 # 						print "End time of segment: %.21f" % end_time
 						rate_2d, rate_1d = lc.make_lightcurve(np.asarray(time), np.asarray(energy), n_bins, dt, start_time)
-# 						print "Shape of rate_1d:", np.shape(rate_1d)
 						lightcurve = np.concatenate((lightcurve, rate_1d))
-# 						print "dt = ", dt
-# 						print np.where(rate_1d != 0)
-# 						print rate_1d[np.where(rate_1d != 0)]
-# 						print len(rate_1d[np.where(rate_1d != 0)])
+						
 						power_segment, mean_rate_segment = each_segment(rate_1d)
-# 						print "\t", mean_rate_segment
 						assert int(len(power_segment)) == n_bins
-# 						print "Shape of power segment:", np.shape(power_segment)
-# 						print "Power segment: ", power_segment[0:4]
-# 						print "Power sum before: ", power_sum[0:4]
+						
 						power_sum += power_segment
-# 						print "Power sum after: ", power_sum[0:4]
-# 						print "Shape of power sum:", np.shape(power_sum)
 						sum_rate_whole += mean_rate_segment
+						
 						## Printing out which segment we're on every x segments
 						if num_segments % print_iterator == 0:
 							print "\t", num_segments
