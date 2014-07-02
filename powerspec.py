@@ -300,7 +300,6 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 	while j <= len(data.field(1)):  # so 'j' doesn't overstep the length of the file
 		
 		num_segments += 1
-# 		print "\tNew Segment; i=%d, j=%d" % (i,j)
 
 		## Extracts the second column of 'data' and assigns it to 'rate'. 
 		time = data[i:j].field(0)
@@ -375,19 +374,14 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 	with open(in_file, 'r') as fo:
 		for line in fo:
 			if line[0].strip() != "#":
-# 				print line
 				line = line.strip().split()
 				start_time = np.float64(line[0])
 				break
 	if start_time is -99:
 		print "\tERROR: Start time of data was not read in. Exiting."
 		exit()
-	
-# 	start_time = 277473713.378430366516113281250  ## To start at same time as fits.lc, for comparison
-	
+		
 	end_time = start_time + (dt * n_bins)
-# 	print "Start time of file is %.21f" % start_time
-# 	print "End time of first seg is %.21f" % end_time
 	assert end_time > start_time
 		
 	with open(in_file, 'r') as f:
@@ -406,9 +400,6 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 				if float(next_line[0]) > end_time:  # Triggered at end of a segment
 					if len(time) > 0:
 						num_segments += 1
-# 						print "\tNew Segment"
-# 						print "Start time of segment: %.21f" % start_time
-# 						print "End time of segment: %.21f" % end_time
 						rate_2d, rate_1d = lc.make_lightcurve(np.asarray(time), np.asarray(energy), n_bins, dt, start_time)
 						lightcurve = np.concatenate((lightcurve, rate_1d))
 						
@@ -579,18 +570,16 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, dt_mult
 	err_power = power_avg / math.sqrt(float(num_segments) * float(len(power_avg)))
 	
 	## Leahy normalization
-	leahy_power_avg = (2.0 * power_avg * dt / ((1.0 / dt) * num_seconds) / mean_rate_whole)
+	leahy_power_avg = (2.0 * power_avg * dt / n_bins / mean_rate_whole)
 	print "Mean value of Leahy power =", np.mean(leahy_power_avg)  # Should be ~2
-	
-	## Fractional rms normalization
-	rms_power_avg = (2.0 * power_avg * dt / ((1.0 / dt) * num_seconds) / \
-		mean_rate_whole ** 2) - (2.0 / mean_rate_whole)
+
+	## Fractional rms normalization with noise subtracted off
+	rms_power_avg = (2.0 * power_avg * dt / n_bins / mean_rate_whole ** 2) - \
+		(2.0 / mean_rate_whole)
 # 	print "Mean value of rms power =", np.mean(rms_power_avg)
 	
-	## Error on fractional rms power -- don't trust this equation (yet)
-	rms_err_power = (2.0 * err_power * dt / ((1.0 / dt) * num_seconds) / mean_rate_whole ** 2)
-# 	print "rms power avg:", rms_power_avg[0:4]
-	
+	## Error on fractional rms power (noise not subtracted off
+	rms_err_power = (2.0 * err_power * dt / n_bins / mean_rate_whole ** 2)	
 	
 	rebinned_freq, rebinned_rms_power, err_rebinned_power = \
 		geometric_rebinning(freq, rms_power_avg, rms_err_power, rebin_const,
