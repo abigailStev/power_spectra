@@ -38,10 +38,12 @@ def get_key_val(fits_file, ext, keyword):
 	
 	ext = np.int8(ext)
 	assert (ext >= 0 and ext <= 3)
+	keyword = str(keyword)
 
 	hdulist = fits.open(fits_file)
 	key_value = hdulist[ext].header[keyword]
 	hdulist.close()
+	
 	return key_value
 	## End of function 'get_key_val'
 
@@ -63,11 +65,8 @@ def compute_obs_time(file_list):
 	total_time = 0
 	
 	for file in input_files:
-		start_time = float(get_keyword(file, 0, 'TSTART'))
-		stop_time = float(get_keyword(file, 0, 'TSTOP'))
-		time = stop_time - start_time
+		time = float(get_key_val(file, 1, 'ONTIME'))
 		total_time += time
-		## End of for-loop
 
 	return total_time # in seconds, but can double check units of times in FITS header
 	## End of function 'compute_obs_time'
@@ -98,6 +97,7 @@ def read_obs_time(in_file):
 					return obs_time
 			else:
 				return 0
+	## End of function 'read_obs_time'
 
 
 #########################################################################################
@@ -105,7 +105,7 @@ def power_of_two(num):
 	"""
 			power_of_two
 			
-	Checks if 'num' is a power of 2 (1 <= num < 2147483648 )
+	Checks if 'num' is a power of 2 (1 <= num < 2147483648).
 	
 	Passed: num - int - The number in question.
 	
@@ -162,6 +162,7 @@ def replace_key_val(fits_file, ext, keyword, value):
 	"""
 	ext = np.int8(ext)
 	assert (ext >= 0 and ext <= 3)
+	keyword = str(keyword)
 	
 	hdu = fits.open(fits_file, mode='update')
 	# print "Before replacing keyword value, %s = %f" %(keyword, hdu[ext].header[keyword])
@@ -296,4 +297,11 @@ def obs_epoch_rxte(fits_file):
 	else:
 		return 5
 	## End of function 'obs_epoch_rxte'
+
+
+#########################################################################################
+if __name__ == '__main__':
+
+	print "\n\t\t tools.py"
+	print "There is no 'main' to this program, only helper methods to import and be called.\n"
 	
