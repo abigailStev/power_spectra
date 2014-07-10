@@ -11,18 +11,8 @@ event list from an ASCII/txt/dat file and 'populates' the light curve segment), 
 light curve up into equal-length segments, takes power spectrum of count rate for each 
 segment, averages those power spectra, applies Leahy and fractional RMS normalizations, 
 computes sample frequency of averaged power spectrum, writes to a file. Able to 
-geometrically re-bin the averaged power spectrum by a float constant.
-
-
-tools.py -- centralized helper methods to import and call within another function
-
-get_key_val can get the value of a keyword from a FITS header; 
-compute_obs_time computes the total observation time in seconds of a list of observation FITS files; 
-read_obs_time reads the observation time from the text header; 
-power_of_two checks is an integer is a power of two; 
-pairwise allows you to get the next two items of an iterable; 
-replace_key_val replaces the value of a keyword in a FITS header; 
-obs_epoch_rxte determines which RXTE calibration epoch an observation was taken during.
+geometrically re-bin the averaged power spectrum by a float constant. Note that 'tools.py'
+is in the git repo 'whizzy scripts'.
 
 
 This code comes with no guarantees.
