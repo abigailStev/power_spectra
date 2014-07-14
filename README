@@ -1,4 +1,4 @@
-Creating a power spectrum!
+Creating a power spectrum of X-ray timing data.
 
 
 CONTENTS:
@@ -8,11 +8,11 @@ powerspec.py -- intended to be used with event-mode RXTE count rate data (122us
 
 Makes a power spectrum for a light curve. Reads in count rate data from a FITS file (or 
 event list from an ASCII/txt/dat file and 'populates' the light curve segment), breaks 
-light curve up into equal-length segments, takes power spectrum of count rate for each 
-segment, averages those power spectra, applies Leahy and fractional RMS normalizations, 
-computes sample frequency of averaged power spectrum, writes to a file. Able to 
-geometrically re-bin the averaged power spectrum by a float constant. Note that 'tools.py'
-is in the git repo 'whizzy scripts'.
+light curve up into equal-length segments, takes power spectrum of the count rate for each 
+segment, averages those power spectra over all segments, applies Leahy and fractional 
+rms^2 normalizations, computes sample frequency of averaged power spectrum, writes to a 
+file. Able to re-bin the averaged power spectrum by a float constant. 
+Note that 'tools.py' is in my git repo 'whizzy_scripts'.
 
 
 This code comes with no guarantees.
