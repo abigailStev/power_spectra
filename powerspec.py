@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 from scipy import fftpack
 from astropy.io import fits
+from datetime import datetime
 
 import populate_lightcurve as lc
 import tools
@@ -16,8 +17,7 @@ datafile - Name of FITS file with photon count rate data.
 outfile - Name of file that the power spectrum will be written to.
 rebinned_outfile - Name of file that the re-binned power spectrum will be 
 	written to.
-seconds - Number of seconds each segment of the light curve should be. Must be
-	a power of 2.
+num_seconds - Number of seconds in each Fourier segment. Must be a power of 2.
 rebin_const - Used to re-bin the data after the average power is computed, such 
 	that bin_size[n+1] = bin_size[n] * rebin_const.
 dt_mult - Multiple of 1/8192 seconds for the timestep between bins.
@@ -28,7 +28,7 @@ Written in Python 2.7 by A.L. Stevens, A.L.Stevens@uva.nl, 2013-2014
 The scientific modules imported above, as well as python 2.7, can be downloaded 
 in the Anaconda package, https://store.continuum.io/cshop/anaconda/
 
-populate_lightcurve is not on GitHub yet.
+populate_lightcurve is not publicly available yet.
 tools is available at https://github.com/abigailStev/whizzy_scripts
 
 """
@@ -176,6 +176,7 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 	
 	with open(out_file, 'w') as out:
 		out.write("#\t\tPower spectrum")
+		out.write("\n# Date(YYYY-MM-DD localtime): %s" % str(datetime.now()))
 		out.write("\n# Data: %s" % in_file)
 		out.write("\n# Time bin size = %.21f seconds" % dt)
 		out.write("\n# Number of bins per segment = %d" % n_bins)
@@ -535,8 +536,8 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 			out_file - Name of output file for standard power spectrum.
 			rebinned_out_file - Name of output file for re-binned power 
 				spectrum.
-			num_seconds - Number of seconds each segment of the light curve 
-				should be. Must be a power of 2.
+			num_seconds - Number of seconds in each Fourier segment. Must be a 
+				power of 2.
 			rebin_const - Used to re-bin the data geometrically after the 
 				average power is computed, such that 
 				bin_size[n+1] = bin_size[n] * rebin_const.
@@ -600,8 +601,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	rms2_power_avg -= 2.0 / mean_rate_whole
 	
 	## Error on fractional rms^2 power (not subtracting noise)
-	rms2_err_power = 2.0 * err_power * dt / float(n_bins) / \
-		mean_rate_whole ** 2
+	rms2_err_power = 2.0 * err_power * dt / float(n_bins) / mean_rate_whole ** 2
 	
 	rebinned_freq, rebinned_rms2_power, err_rebinned_power = \
 		geometric_rebinning(freq, rms2_power_avg, rms2_err_power, rebin_const,
@@ -618,9 +618,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 
 ################################################################################
 if __name__ == "__main__":
-	"""
-	Parsing cmd-line arguments and calling 'main'
-	"""
+
 	parser = argparse.ArgumentParser(description='Makes a power spectrum out \
 		of an event-mode data file from RXTE.')
 	parser.add_argument('-i', '--infile', required=True, dest='infile', \
@@ -630,12 +628,12 @@ if __name__ == "__main__":
 	parser.add_argument('-o', '--outfile', required=True, dest='outfile', \
 		help='The full path of the (ASCII/txt) file to write the frequency and \
 		power to.')
-	parser.add_argument('-b', '--rebinned_outfile', required=True, 
+	parser.add_argument('-r', '--rebinned_outfile', required=True, 
 		dest='rebinned_outfile', help='The full path of the (ASCII/txt) file \
 		to write the re-binned frequency and power to.')
 	parser.add_argument('-n', '--num_seconds', type=int, default=1, 
-		dest='num_seconds', help='Number of seconds in each segment that the \
-		light curve is broken up into. Must be a power of 2.')
+		dest='num_seconds', help='Number of seconds in each Fourier segment. \
+		Must be a power of 2.')
 	parser.add_argument('-c', '--rebin_const', type=float, default=1.01, 
 		dest='rebin_const', help='Float constant by which we re-bin the \
 		averaged power spectrum.')
