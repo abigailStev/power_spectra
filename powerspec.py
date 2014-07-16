@@ -91,7 +91,6 @@ def geometric_rebinning(freq, rms2_power_avg, rms2_err_power, rebin_const,
 		for k in xrange(prev_m, current_m):
 			bin_power += rms2_power_avg[k]
 			err_bin_power2 += rms2_err_power[k] ** 2
-			## End of for-loop
 		
 		## Determining the range of indices this specific geometric bin covers
 		bin_range = np.absolute(current_m - prev_m)
@@ -129,10 +128,10 @@ def geometric_rebinning(freq, rms2_power_avg, rms2_err_power, rebin_const,
 		bin_power = None
 		err_bin_power2 = None
 		
-		## End of while-loop
+	## End of while-loop
 		
 	return rebinned_freq, rebinned_rms2_power, err_rebinned_power
-	## End of function 'geometric_rebinning'
+## End of function 'geometric_rebinning'
 	
 
 ################################################################################
@@ -199,9 +198,9 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 # 					rms2_err_power[k]))
 				out.write("\n{0:.8f}\t{1:.8f}\t{2:.8f}\t{3:.8f}".format(freq[k], 
 					rms2_power_avg[k], rms2_err_power[k], leahy_power_avg[k]))
-				## End of if-statement
-			## End of for-loop
-		## End of with-block
+			## End of if-statement
+		## End of for-loop
+	## End of with-block
 	
 	## Now outputting the re-binned data -- Need to do this separately since it
 	## has a different number of data points from the regular power spectrum.
@@ -229,10 +228,10 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 			if rebinned_freq[k] >= 0:
 				out.write("\n{0:.8f}\t{1:.8f}\t{2:.8f}".format(rebinned_freq[k],
                     rebinned_rms2_power[k], err_rebinned_power[k]))
-				## End of if-statement
-			## End of for-loop
-		## End of with-block
-	## End of function 'output'
+			## End of if-statement
+		## End of for-loop
+	## End of with-block
+## End of function 'output'
 
 
 ################################################################################
@@ -266,7 +265,7 @@ def each_segment(rate):
 	power_segment = np.absolute(fft_data) ** 2
 	
 	return power_segment, mean_rate
-	## End of function 'each_segment'
+## End of function 'each_segment'
 
 
 ################################################################################
@@ -336,10 +335,10 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 		## function works) it's ok that we set i=j here for the next round. 
 		## This will not cause double-counting rows or skipping rows.
        
-		## End of while-loop
+	## End of while-loop
 		
 	return power_sum, sum_rate_whole, num_segments
-	## End of function 'fits_powerspec'
+## End of function 'fits_powerspec'
 
 
 ################################################################################
@@ -442,18 +441,18 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 						if (test is True) and (num_segments == 2):  # Testing
 							np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
 							break
-						## End of 'if there are counts in this segment'
+					## End of 'if there are counts in this segment'
 
 					start_time += (n_bins * dt)
 					end_time += (n_bins * dt)
 					
-					## End of 'if we're at the end of a segment'
-				## End of 'if the line is not a comment'
-			## End of for-loop 
-		## End of with-block
+				## End of 'if we're at the end of a segment'
+			## End of 'if the line is not a comment'
+		## End of for-loop 
+	## End of with-block
 	
 	return power_sum, sum_rate_whole, num_segments
-	## End of function 'ascii_powerspec'
+## End of function 'ascii_powerspec'
 	
 
 ################################################################################
@@ -521,7 +520,7 @@ def make_powerspec(in_file, n_bins, dt, test):
 		## End of 'if/else file is fits format'
 	
 	return power_sum, sum_rate_whole, num_segments
-	## End of function 'make_powerspec'
+## End of function 'make_powerspec'
 	
 	
 ################################################################################
@@ -613,7 +612,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 		leahy_power_avg, rebin_const, rebinned_freq, rebinned_rms2_power, 
 		err_rebinned_power)
 	
-	## End of function 'main'
+## End of function 'main'
 	
 
 
