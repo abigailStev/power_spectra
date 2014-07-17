@@ -181,13 +181,12 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 		out.write("\n# Time bin size = %.21f seconds" % dt)
 		out.write("\n# Number of bins per segment = %d" % n_bins)
 		out.write("\n# Number of segments per light curve = %d" % num_segments)
-		out.write("\n# Duration of light curve used = %d seconds" \
+		out.write("\n# Exposure time = %d seconds" \
 			% (num_segments * n_bins * dt))
-		out.write("\n# Mean count rate = %.8f, over whole light curve" % \
-			mean_rate_whole)
+		out.write("\n# Mean count rate = %.8f" % mean_rate_whole)
 		out.write("\n# Nyquist frequency = %.4f" % nyquist_freq)
 		out.write("\n# ")
-		out.write("\n# Column 1: Frequency in Hz (sample_frequency * 1.0/dt)")
+		out.write("\n# Column 1: Frequency [Hz]")
 		out.write("\n# Column 2: Fractional rms^2 normalized mean power")
 		out.write("\n# Column 3: Fractional rms^2 normalized error on the mean \
 			power")
@@ -211,16 +210,15 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 	with open(rebinned_out_file, 'w') as out:
 		out.write("#\t\tPower spectrum")
 		out.write("\n# Data: %s" % in_file)
-		out.write("\n# Re-binned in frequency at (%.4f * prev bin size)" % \
-			rebin_const)
+		out.write("\n# Re-binned in frequency at (%.4f * prev bin size)" \
+			% rebin_const)
 		out.write("\n# Corresponding un-binned output file: %s" % out_file)
 		out.write("\n# Original time bin size = %.21f seconds" % dt)
-		out.write("\n# Duration of light curve used = %d seconds" \
+		out.write("\n# Exposure time = %d seconds" \
 			% (num_segments * n_bins * dt))
-		out.write("\n# Mean count rate = %.8f, over whole light curve" % \
-			mean_rate_whole)
+		out.write("\n# Mean count rate = %.8f" % mean_rate_whole)
 		out.write("\n# ")
-		out.write("\n# Column 1: Frequency in Hz")
+		out.write("\n# Column 1: Frequency [Hz]")
 		out.write("\n# Column 2: Fractional rms^2 normalized mean power")
 		out.write("\n# Column 3: Error in fractional rms^2 normalized mean \
 			power")
