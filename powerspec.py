@@ -483,10 +483,10 @@ def make_powerspec(in_file, n_bins, dt, test):
 	assert tools.power_of_two(n_bins)
 	assert tools.power_of_two(1.0 / dt)
 	
-	len_fname = len(in_file)
+# 	len_fname = len(in_file)
 		
-	if (in_file[len_fname - 3:len_fname].lower() == ".lc") or \
-		(in_file[len_fname - 5:len_fname].lower() == ".fits"):
+	if (in_file[-3:].lower() == ".lc") or \
+		(in_file[-5:].lower() == ".fits"):
 		using_fits = True
 	else:
 		using_fits = False
@@ -587,7 +587,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	power_avg = power_avg[0:max_index + 1]
 	
 	## Computing the error on the mean power
-	err_power = power_avg / np.sqrt(float(num_segments) * len(power_avg))
+	err_power = power_avg / np.sqrt(float(num_segments) * float(n_bins))
 	
 	## Leahy normalization
 	leahy_power_avg = 2.0 * power_avg * dt / float(n_bins) / mean_rate_whole
@@ -600,6 +600,8 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	
 	## Error on fractional rms^2 power (not subtracting noise)
 	rms2_err_power = 2.0 * err_power * dt / float(n_bins) / mean_rate_whole ** 2
+	
+	print err_power / power_avg
 	
 	rebinned_freq, rebinned_rms2_power, err_rebinned_power = \
 		geometric_rebinning(freq, rms2_power_avg, rms2_err_power, rebin_const,
