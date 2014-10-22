@@ -34,7 +34,7 @@ tools is available at https://github.com/abigailStev/whizzy_scripts
 """
 
 ################################################################################
-def geometric_rebinning(freq, rms2_power_avg, rms2_err_power, rebin_const, 
+def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const, 
 						orig_length_of_list):
 	"""
 			geometric_rebinning
@@ -42,7 +42,7 @@ def geometric_rebinning(freq, rms2_power_avg, rms2_err_power, rebin_const,
 	Re-bins the noise-subtracted fractional rms^2 power spectrum in frequency 
 	space by some re-binning constant (rebin_const>1). 
 
-	Passed: rms2_power_avg - Fractional rms^2 power, averaged over all segments
+	Passed: rms2_power - Fractional rms^2 power, averaged over all segments
 				in the light curve.
 			rms2_err_power - Error on the fractional rms^2 power.
 			freq - Frequencies (in Hz) corresponding to the power spectrum.
@@ -63,10 +63,10 @@ def geometric_rebinning(freq, rms2_power_avg, rms2_err_power, rebin_const,
 	rebinned_rms2_power = []	 # List of re-binned fractional rms power
 	rebinned_freq = []		 # List of re-binned frequencies
 	err_rebinned_power = []	 # List of error in re-binned power
-	real_index = 1.0		 # The unrounded next index in power_avg
+	real_index = 1.0		 # The unrounded next index in power
 	int_index = 1			 # The int of real_index, added to current_m every 
 							 #  iteration
-	current_m = 1			 # Current index in power_avg
+	current_m = 1			 # Current index in power
 	prev_m = 0				 # Previous index m
 	bin_power = 0.0			 # The power of the current re-binned bin
 	bin_freq = 0.0			 # The frequency of the current re-binned bin
@@ -74,7 +74,7 @@ def geometric_rebinning(freq, rms2_power_avg, rms2_err_power, rebin_const,
 	bin_range = 0.0			 # The range of un-binned bins covered by this 
 							 #  re-binned bin
 	
-	## Looping through the length of the array power_avg, geometric bin by 
+	## Looping through the length of the array power, geometric bin by 
 	## geometric bin, to compute the average power and frequency of that
 	## geometric bin.
 	## Equations for frequency, power, and error on power are from Adam Ingram's
@@ -89,7 +89,7 @@ def geometric_rebinning(freq, rms2_power_avg, rms2_err_power, rebin_const,
 		
 		## Looping through the data points contained within one geometric bin
 		for k in xrange(prev_m, current_m):
-			bin_power += rms2_power_avg[k]
+			bin_power += rms2_power[k]
 			err_bin_power2 += rms2_err_power[k] ** 2
 		
 		## Determining the range of indices this specific geometric bin covers
@@ -105,7 +105,7 @@ def geometric_rebinning(freq, rms2_power_avg, rms2_err_power, rebin_const,
 		## to take an average. This also prevents it from skipping the first 
 		## data point.
 		if bin_range == 1:
-			bin_power = rms2_power_avg[prev_m]
+			bin_power = rms2_power[prev_m]
 			bin_freq = freq[prev_m]
 		
 		## Appending values to arrays
@@ -136,8 +136,8 @@ def geometric_rebinning(freq, rms2_power_avg, rms2_err_power, rebin_const,
 
 ################################################################################
 def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, 
-	num_segments, mean_rate_whole, freq, rms2_power_avg, rms2_err_power, 
-	leahy_power_avg, rebin_const, rebinned_freq, rebinned_rms2_power, 
+	num_segments, mean_rate_whole, freq, rms2_power, rms2_err_power, 
+	leahy_power, rebin_const, rebinned_freq, rebinned_rms2_power, 
 	err_rebinned_power):
 	""" 
 			output
@@ -154,9 +154,9 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 			num_segments - Number of segments in the light curve.
 			mean_rate_whole - Mean count rate of the light curve.
 			freq - Frequencies (in Hz) corresponding to the power spectrum.
-			leahy_power_avg - Leahy-normalized power, averaged over all
+			leahy_power - Leahy-normalized power, averaged over all
 				segments of the light curve.
-			rms2_power_avg - Fractional rms power, averaged over all 
+			rms2_power - Fractional rms power, averaged over all 
 				segments of the light curve and all light curves.
 			rms2_err_power - Error on avg fractional rms power.
 			rebin_const - Constant >1 by which we want to re-bin the spectrum,
@@ -192,12 +192,12 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 			power")
 		out.write("\n# Column 4: Leahy-normalized mean power")
 		out.write("\n# ")
-		for k in xrange(len(rms2_power_avg)):
+		for k in xrange(len(rms2_power)):
 			if freq[k] >= 0:
-# 				out.write("\n%.8f\t%.8f\t%.8f" % (freq[k], rms2_power_avg[k], 
+# 				out.write("\n%.8f\t%.8f\t%.8f" % (freq[k], rms2_power[k], 
 # 					rms2_err_power[k]))
 				out.write("\n{0:.8f}\t{1:.8f}\t{2:.8f}\t{3:.8f}".format(freq[k], 
-					rms2_power_avg[k], rms2_err_power[k], leahy_power_avg[k]))
+					rms2_power[k], rms2_err_power[k], leahy_power[k]))
 			## End of if-statement
 		## End of for-loop
 	## End of with-block
@@ -234,12 +234,12 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 
 
 ################################################################################
-def each_segment(rate):
+def make_ps(rate):
 	"""
-			each_segment
+			make_ps
 	
-	Computes the mean count rate of this segment, the FFT of the count rate 
-	minus the mean, and the power spectrum of this segment.
+	Computes the mean count rate, the FFT of the count rate minus the mean, and 
+	the power spectrum of this segment of data.
 	
 	Passed: rate - Count rate for this segment of data.
 	
@@ -264,7 +264,7 @@ def each_segment(rate):
 	power_segment = np.absolute(fft_data) ** 2
 	
 	return power_segment, mean_rate
-## End of function 'each_segment'
+## End of function 'make_ps'
 
 
 ################################################################################
@@ -273,8 +273,7 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 			fits_powerspec
 	
 	Opens the FITS file light curve, reads the count rate for a segment, calls 
-	'each_segment' to create a power spectrum, adds power spectra over all 
-	segments.
+	'make_ps' to create a power spectrum, adds power spectra over all segments.
 	
 	Passed: in_file - Name of (FITS) input file/light curve.
 			n_bins - Number of integer bins per segment. Must be a power of 2.
@@ -313,7 +312,7 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 		## Extracts the second column of 'data' and assigns it to 'rate'. 
 		rate = data[i:j].field(1)
 		
-		power_segment, mean_rate_segment = each_segment(rate)
+		power_segment, mean_rate_segment = make_ps(rate)
 		
 		power_sum += power_segment
 		sum_rate_whole += mean_rate_segment
@@ -323,7 +322,7 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 			
 		if (test == True) and (num_segments == 1):  # For testing
 			break
-			
+
 		rate = None
 		power_segment = None
 		mean_rate_segment = None
@@ -346,7 +345,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 			ascii_powerspec
 		
 	Opens the (ASCII/txt/dat) event list, reads the count rate for a segment, 
-	populates the light curve, calls 'each_segment' to create a power spectrum, 
+	populates the light curve, calls 'make_ps' to create a power spectrum, 
 	adds power spectra over all segments.
 	
 	Assumes that all event times have been corrected with TIMEZERO, and 
@@ -417,7 +416,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 							np.asarray(energy), n_bins, dt, start_time)
 						lightcurve = np.concatenate((lightcurve, rate_1d))
 						
-						power_segment, mean_rate_segment = each_segment(rate_1d)
+						power_segment, mean_rate_segment = make_ps(rate_1d)
 						assert int(len(power_segment)) == n_bins
 						
 						power_sum += power_segment
@@ -437,9 +436,11 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 						time = []
 						energy = []
 						
-						if (test is True) and (num_segments == 2):  # Testing
+						if (test is True) and (num_segments == 1):  # Testing
 							np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
 							break
+# 						if num_segments >= 500:
+# 							break
 					## End of 'if there are counts in this segment'
 
 					start_time += (n_bins * dt)
@@ -455,11 +456,11 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 	
 
 ################################################################################
-def make_powerspec(in_file, n_bins, dt, test):
+def read_and_use_segments(in_file, n_bins, dt, test):
 	"""
-			make_powerspec
+			read_and_use_segments
 			
-	Opens the file, reads in the count rate, calls 'each_segment' to create 
+	Opens the file, reads in the count rate, calls 'make_ps' to create a
 	power spectrum. Separated from main body like this so I can easily call it 
 	in multi_powerspec.py. Split into 'fits_powerspec' and 'ascii_powerspec' 
 	for easier readability.
@@ -519,10 +520,58 @@ def make_powerspec(in_file, n_bins, dt, test):
 		## End of 'if/else file is fits format'
 	
 	return power_sum, sum_rate_whole, num_segments
-## End of function 'make_powerspec'
+## End of function 'read_and_use_segments'
+
+###############################################################################
+def normalize(n_bins, dt, power, num_segments, mean_rate_whole):
+	"""
+			normalize
+	
+	Generates the Fourier frequencies, removes negative frequencies, normalizes
+	the power by Leahy and fractional rms^2 normalizations, and computes the 
+	error on the power for frac
+	
+	Passed: n_bins - 
+			dt - 
+			power - 
+			num_segments - 
+			mean_rate_whole -
+	
+	Returns: freq - 
+			 power - 
+			 leahy_power - 
+			 rms2_power - 
+	"""
+	## Computing the FFT sample frequencies (in Hz)
+	freq = fftpack.fftfreq(n_bins, d=dt)
+
+	## Ensuring that we're only using and saving the positive frequency values 
+	##  (and associated power values)
+	max_index = np.argmax(freq)
+	freq = freq[0:max_index + 1]  # because it slices at end-1, and we want to 
+								  # include 'max_index'
+	power = power[0:max_index + 1]
+	
+	## Computing the error on the mean power
+	err_power = power / np.sqrt(float(num_segments) * float(n_bins))
+	
+	## Leahy normalization
+	leahy_power = 2.0 * power * dt / float(n_bins) / mean_rate_whole
+	print "Mean value of Leahy power =", np.mean(leahy_power)  # ~2
+
+	## Fractional rms^2 normalization with noise subtracted off
+	rms2_power = 2.0 * power * dt / float(n_bins) / \
+		(mean_rate_whole ** 2)
+	rms2_power -= 2.0 / mean_rate_whole
+	
+	## Error on fractional rms^2 power (not subtracting noise)
+	rms2_err_power = 2.0 * err_power * dt / float(n_bins) / mean_rate_whole ** 2
+		
+	return freq, power, leahy_power, rms2_power, rms2_err_power
+	## End of function 'normalize'
 	
 	
-################################################################################
+###############################################################################
 def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, 
 	dt_mult, test):
 	""" 
@@ -544,21 +593,13 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	
 	Returns: nothing
 	
-	"""
-	pass
-	
-	## Idiot checks, to ensure that our assumptions hold
-	assert num_seconds > 0  # num_seconds must be a positive integer
-	assert tools.power_of_two(num_seconds)
+	"""	
 	assert rebin_const >= 1.0  # rebin_const must be a float greater than 1
-	assert dt_mult >= 1
 
 	t_res = 1.0 / 8192.0
- 	#print "%.21f" %t_res
 	dt = dt_mult * t_res
-	#print dt
-	#print "%.21f" % dt
 	n_bins = num_seconds * int(1.0 / dt)
+	assert tools.power_of_two(n_bins)
 	nyquist_freq = 1.0 / (2.0 * dt)
 	df = 1.0 / float(num_seconds)
 	
@@ -566,50 +607,26 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	print "n_bins = %d" % n_bins
 	print "Nyquist freq =", nyquist_freq
 	
-	power_sum, sum_rate_whole, num_segments = make_powerspec(in_file, n_bins, \
-		dt, test)
+	power_sum, sum_rate_whole, num_segments = read_and_use_segments(in_file, \
+		n_bins, dt, test)
 	print "\tTotal number of segments =", num_segments
 
 	## Dividing sums by the number of segments to get an arithmetic average.
-	power_avg = power_sum / float(num_segments)
-	assert int(len(power_avg)) == n_bins
+	power = power_sum / float(num_segments)
+	assert int(len(power)) == n_bins
 	mean_rate_whole = sum_rate_whole / float(num_segments)
 	print "Mean count rate over whole lightcurve =", mean_rate_whole
 
-	## Computing the FFT sample frequencies (in Hz)
-	freq = fftpack.fftfreq(n_bins, d=dt)
-
-	## Ensuring that we're only using and saving the positive frequency values 
-	##  (and associated power values)
-	max_index = np.argmax(freq)
-	freq = freq[0:max_index + 1]  # because it slices at end-1, and we want to 
-								  # include max
-	power_avg = power_avg[0:max_index + 1]
-	
-	## Computing the error on the mean power
-	err_power = power_avg / np.sqrt(float(num_segments) * float(n_bins))
-	
-	## Leahy normalization
-	leahy_power_avg = 2.0 * power_avg * dt / float(n_bins) / mean_rate_whole
-	print "Mean value of Leahy power =", np.mean(leahy_power_avg)  # ~2
-
-	## Fractional rms^2 normalization with noise subtracted off
-	rms2_power_avg = 2.0 * power_avg * dt / float(n_bins) / \
-		(mean_rate_whole ** 2)
-	rms2_power_avg -= 2.0 / mean_rate_whole
-	
-	## Error on fractional rms^2 power (not subtracting noise)
-	rms2_err_power = 2.0 * err_power * dt / float(n_bins) / mean_rate_whole ** 2
-	
-	print err_power / power_avg
+	freq, power, leahy_power, rms2_power, rms2_err_power = normalize(n_bins, \
+		dt, power, num_segments, mean_rate_whole)
 	
 	rebinned_freq, rebinned_rms2_power, err_rebinned_power = \
-		geometric_rebinning(freq, rms2_power_avg, rms2_err_power, rebin_const,
-		int(len(power_avg)))
+		geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const,
+		int(len(power)))
 		
 	output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, 
-		num_segments, mean_rate_whole, freq, rms2_power_avg, rms2_err_power, 
-		leahy_power_avg, rebin_const, rebinned_freq, rebinned_rms2_power, 
+		num_segments, mean_rate_whole, freq, rms2_power, rms2_err_power, 
+		leahy_power, rebin_const, rebinned_freq, rebinned_rms2_power, 
 		err_rebinned_power)
 	
 ## End of function 'main'
@@ -621,34 +638,28 @@ if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description='Makes a power spectrum out \
 		of an event-mode data file from RXTE.')
-	parser.add_argument('-i', '--infile', required=True, dest='infile', \
-		help='The full path of the input file with RXTE event-mode data, with \
-		time in column 1 and rate in column 2. FITS format must have extension \
-		.lc or .fits, otherwise assumes .dat (ASCII/txt) format.')
-	parser.add_argument('-o', '--outfile', required=True, dest='outfile', \
-		help='The full path of the (ASCII/txt) file to write the frequency and \
-		power to.')
-	parser.add_argument('-r', '--rebinned_outfile', required=True, 
-		dest='rebinned_outfile', help='The full path of the (ASCII/txt) file \
-		to write the re-binned frequency and power to.')
-	parser.add_argument('-n', '--num_seconds', type=int, default=1, 
-		dest='num_seconds', help='Number of seconds in each Fourier segment. \
-		Must be a power of 2.')
+	parser.add_argument('infile', help='The full path of the input file with \
+		RXTE event-mode data, with time in column 1 and rate in column 2. FITS \
+		format must have extension .lc or .fits, otherwise assumes .dat \
+		(ASCII/txt) format.')
+	parser.add_argument('outfile', help='The full path of the .dat file to \
+		write the frequency and power to.')
+	parser.add_argument('rebinned_outfile', help='The full path of the .dat \
+		file to write the re-binned frequency and power to.')
+	parser.add_argument('-n', '--num_seconds', type=tools.type_power_of_two, \
+		default=1, dest='num_seconds', help='Number of seconds in each Fourier \
+		segment. Must be a power of 2.')
 	parser.add_argument('-c', '--rebin_const', type=float, default=1.01, 
 		dest='rebin_const', help='Float constant by which we re-bin the \
 		averaged power spectrum.')
-	parser.add_argument('-m', '--dt_mult', type=int, default=1, dest='dt_mult', 
-		help='Multiple of 1/8192 seconds for timestep between bins.')
-	parser.add_argument('-t', '--test', type=int, default=0, choices=range(0,2), 
-		dest='test', help='1 if only computing one segment for testing, 0 if \
-		computing all segments.')
+	parser.add_argument('-m', '--dt_mult', type=tools.type_power_of_two, \
+		default=1, dest='dt_mult', help='Multiple of 1/8192 seconds for \
+		timestep between bins. Must be a power of 2.')
+	parser.add_argument('--test', action='store_true', help='If present, only \
+		does a short test run.')
 	args = parser.parse_args()
-	
-	test = False
-	if args.test == 1: 
-		test = True
-		
+			
 	main(args.infile, args.outfile, args.rebinned_outfile, args.num_seconds,
-		args.rebin_const, args.dt_mult, test)
+		args.rebin_const, args.dt_mult, args.test)
 
 ## End of program 'powerspec.py'
