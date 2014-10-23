@@ -413,7 +413,6 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 						
 						power_sum += power_segment
 						sum_rate_whole += mean_rate_segment
-						
 						## Printing out which segment we're on every x segments
 						if num_segments % print_iterator == 0:
 							print "\t", num_segments
@@ -431,8 +430,9 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 						if (test is True) and (num_segments == 1):  # Testing
 							np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
 							break
-# 						if num_segments >= 500:
-# 							break
+						if num_segments >= 400:
+							break
+
 					## End of 'if there are counts in this segment'
 
 					start_time += (n_bins * dt)
@@ -511,7 +511,7 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 
 
 ###############################################################################
-def normalize(n_bins, dt, power, num_segments, mean_rate):
+def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate):
 	"""
 			normalize
 	
@@ -519,9 +519,10 @@ def normalize(n_bins, dt, power, num_segments, mean_rate):
 	the power by Leahy and fractional rms^2 normalizations, and computes the 
 	error on the fractional rms^2 power.
 	
-	Passed: n_bins - Number of bins per segment. Must be a power of 2.
+	Passed: power - The power spectrum averaged over all segments.
+			n_bins - Number of bins per segment.
 			dt - Timestep between bins, in seconds.
-			power - The power spectrum averaged over all segments.
+			num_seconds - Length of each Fourier segment, in seconds.
 			num_segments - Number of segments the light curve is broken up into.
 			mean_rate - The mean count rate over all segments of data.
 	
@@ -556,6 +557,21 @@ def normalize(n_bins, dt, power, num_segments, mean_rate):
 	## Error on fractional rms^2 power (not subtracting noise)
 	rms2_err_power = 2.0 * err_power * dt / float(n_bins) / mean_rate ** 2
 	
+	df = 1.0 / float(num_seconds)  # in Hz
+	signal_freq = freq[np.argmax(power)]  # Assumes that the signal dominates 
+										  # the power spectrum.
+	print "Frequency of maximum power:", signal_freq
+	min_freq_mask = freq < signal_freq  # we want the last 'True' element
+	max_freq_mask = freq > signal_freq  # we want the first 'True' element
+	j_min = list(min_freq_mask).index(False)
+	j_max = list(max_freq_mask).index(True)
+	## Extracting only the signal frequencies of the power
+	signal_pow = np.float64(rms2_power[j_min:j_max])
+	## Computing variance and rms of the signal
+	signal_variance = np.sum(signal_pow * df)
+	rms = np.sqrt(signal_variance)  # should be a few % in frac rms units
+	print "RMS of signal:", rms
+	
 	return freq, power, leahy_power, rms2_power, rms2_err_power
 	## End of function 'normalize'
 	
@@ -585,7 +601,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	"""	
 	assert rebin_const >= 1.0  # rebin_const must be a float greater than 1
 
-	t_res = 1.0 / 8192.0
+	t_res = 1.0 / 8192.0  # The time resolution of the data, in seconds
 	dt = dt_mult * t_res
 	n_bins = num_seconds * int(1.0 / dt)
 	assert tools.power_of_two(n_bins)
@@ -606,8 +622,8 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	mean_rate_whole = sum_rate_whole / float(num_segments)
 	print "Mean count rate over whole lightcurve =", mean_rate_whole
 
-	freq, power, leahy_power, rms2_power, rms2_err_power = normalize(n_bins, \
-		dt, power, num_segments, mean_rate_whole)
+	freq, power, leahy_power, rms2_power, rms2_err_power = normalize(power, \
+		n_bins, dt, num_seconds, num_segments, mean_rate_whole)
 	
 	rebinned_freq, rebinned_rms2_power, err_rebinned_power = \
 		geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const)
@@ -644,8 +660,8 @@ if __name__ == "__main__":
 	parser.add_argument('-m', '--dt_mult', type=tools.type_power_of_two, \
 		default=1, dest='dt_mult', help='Multiple of 1/8192 seconds for \
 		timestep between bins. Must be a power of 2. [1]')
-	parser.add_argument('--test', action='store_true', help='If present, only \
-		does a short test run.')
+	parser.add_argument('--test', action='store_true', dest='test', help='If \
+		present, only does a short test run.')
 	args = parser.parse_args()
 			
 	main(args.infile, args.outfile, args.rebinned_outfile, args.num_seconds,
