@@ -430,7 +430,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 						if (test is True) and (num_segments == 1):  # Testing
 							np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
 							break
-						if num_segments >= 400:
+						if num_segments >= 600:
 							break
 
 					## End of 'if there are counts in this segment'
