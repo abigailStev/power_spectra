@@ -310,7 +310,7 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 		
 		power_sum += power_segment
 		sum_rate_whole += mean_rate_segment
-
+		
 		if num_segments % print_iterator == 0:
 			print "\t", num_segments
 			
@@ -410,7 +410,7 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 						
 						power_segment, mean_rate_segment = make_ps(rate_1d)
 						assert int(len(power_segment)) == n_bins
-						
+
 						power_sum += power_segment
 						sum_rate_whole += mean_rate_segment
 						## Printing out which segment we're on every x segments
@@ -607,15 +607,15 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	assert tools.power_of_two(n_bins)
 	nyquist_freq = 1.0 / (2.0 * dt)
 	df = 1.0 / float(num_seconds)
-	
+
 	print "dt = %.21f seconds" % dt
 	print "n_bins = %d" % n_bins
 	print "Nyquist freq =", nyquist_freq
 	
 	power_sum, sum_rate_whole, num_segments = read_and_use_segments(in_file, \
 		n_bins, dt, test)
+	
 	print "\tTotal number of segments =", num_segments
-
 	## Dividing sums by the number of segments to get an arithmetic average.
 	power = power_sum / float(num_segments)
 	assert int(len(power)) == n_bins
