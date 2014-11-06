@@ -307,7 +307,6 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 		rate = data[i:j].field(1)
 		
 		power_segment, mean_rate_segment = make_ps(rate)
-		
 		power_sum += power_segment
 		sum_rate_whole += mean_rate_segment
 		
@@ -430,8 +429,6 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 						if (test is True) and (num_segments == 1):  # Testing
 							np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
 							break
-						if num_segments >= 600:
-							break
 
 					## End of 'if there are counts in this segment'
 
@@ -535,12 +532,16 @@ def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate):
 	"""
 	## Computing the FFT sample frequencies (in Hz)
 	freq = fftpack.fftfreq(n_bins, d=dt)
-		
 	## Ensuring that we're only using and saving the positive frequency values 
 	##  (and associated power values)
-	max_index = np.argmax(freq)
-	freq = freq[0:max_index + 1]  # because it slices at end-1, and we want to 
-								  # include 'max_index'
+	max_index = np.argmax(freq)+1  # because in python, the scipy fft makes the 
+								   # nyquist frequency negative, and we want it 
+								   # to be positive! (it is actually both pos 
+								   # and neg)
+	freq = np.abs(freq[0:max_index + 1])  # because it slices at end-1, and we 
+										  # want to include 'max_index'; abs is
+										  # because the nyquist freq is both pos
+										  # and neg, and we want it pos here.
 	power = power[0:max_index + 1]
 	
 	## Computing the error on the mean power
