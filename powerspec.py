@@ -3,6 +3,7 @@ import numpy as np
 from scipy import fftpack
 from astropy.io import fits
 from datetime import datetime
+import os
 
 import populate_lightcurve as lc
 import tools
@@ -37,14 +38,15 @@ tools is available at https://github.com/abigailStev/whizzy_scripts
 """
 
 ################################################################################
-def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, 
+def ascii_output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, 
 	num_segments, mean_rate_whole, freq, rms2_power, rms2_err_power, 
 	leahy_power, rebin_const, rebinned_freq, rebinned_rms2_power, 
 	err_rebinned_power):
 	""" 
-			output
+			ascii_output
 			
-	Writes power spectrum and re-binned power spectrum to two output files.
+	Writes power spectrum and re-binned power spectrum to two ASCII output 
+	files.
 		
 	Passed: out_file - Name of output file for standard power spectrum.
 			rebinned_out_file - Name of output file for geometrically re-binned 
@@ -102,6 +104,8 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 			## End of if-statement
 		## End of for-loop
 	## End of with-block
+# 	else:
+# 		raise Exception("ERROR: Could not open output file %s." % out_file)
 	
 	## Now outputting the re-binned data -- Need to do this separately since it
 	## has a different number of data points from the regular power spectrum.
@@ -131,8 +135,103 @@ def output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 			## End of if-statement
 		## End of for-loop
 	## End of with-block
+# 	else:
+# 		raise Exception("ERROR: Could not open output file %s." % out_file)
 ## End of function 'output'
 
+################################################################################
+def fits_output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, 
+	num_segments, mean_rate_whole, freq, rms2_power, rms2_err_power, 
+	leahy_power, rebin_const, rebinned_freq, rebinned_rms2_power, 
+	err_rebinned_power):
+	"""
+				fits_output
+			
+	Writes power spectrum and re-binned power spectrum to two FITS files.
+		
+	Passed: out_file - Name of output file for standard power spectrum.
+			rebinned_out_file - Name of output file for geometrically re-binned 
+				power spectrum.
+			in_file - Full path of filename containing input data.
+			dt - Size of time bin, in seconds (must be power of 2).
+			n_bins - Number of time bins in a segment (must be power of 2).
+			nyquist_freq - Nyquist frequency = 1/(2*dt)
+			num_segments - Number of segments in the light curve.
+			mean_rate_whole - Mean count rate of the light curve.
+			freq - Frequencies (in Hz) corresponding to the power spectrum.
+			leahy_power - Leahy-normalized power, averaged over all
+				segments of the light curve.
+			rms2_power - Fractional rms power, averaged over all 
+				segments of the light curve and all light curves.
+			rms2_err_power - Error on avg fractional rms power.
+			rebin_const - Constant >1 by which we want to re-bin the spectrum,
+				such that bin_size[n+1] = bin_size[n] * rebin_const.
+			rebinned_freq - Frequencies of power spectrum re-binned
+				according to rebin_const.
+			rebinned_rms2_power - Power spectrum re-binned according to 
+				rebin_const.
+			err_rebinned_power - Error on re-binned fractional rms 
+				power.
+
+	Returns: nothing
+	"""
+	
+	## Making header for standard power spectrum
+	prihdr = fits.Header()
+	prihdr.set('TYPE', "Power spectrum")
+	prihdr.set('DATE', str(datetime.now()), "YYYY-MM-DD localtime")
+	prihdr.set('EVTLIST', in_file)
+	prihdr.set('DT', dt, "seconds")
+	prihdr.set('N_BINS', n_bins, "time bins per segment")
+	prihdr.set('SEGMENTS', num_segments, "segments in the whole light curve")
+	prihdr.set('EXPOSURE', num_segments * n_bins * dt, "seconds, of light curve")
+	prihdr.set('MEANRATE', mean_rate_whole, "counts / second")
+	prihdr.set('NYQUIST', nyquist_freq, "Hz")
+	prihdu = fits.PrimaryHDU(header=prihdr)
+	
+	## Making FITS table for standard power spectrum
+	col1 = fits.Column(name='Frequency', unit='Hz', format='E', array=freq)
+	col2 = fits.Column(name='Power', unit='frac rms^2', format='E', array=rms2_power)
+	col3 = fits.Column(name='Error', unit='frac rms^2', format='E', array=rms2_err_power)
+	col4 = fits.Column(name='Leahy', format='E', array=leahy_power)
+	cols = fits.ColDefs([col1, col2, col3, col4])
+	tbhdu = fits.BinTableHDU.from_columns(cols)
+	
+	## If the file already exists, remove it (still working on just updating it)
+	fits_output = out_file[0:-3]+"fits"
+	if os.path.isfile(fits_output):
+		print "File previously existed. Removing and rewriting."
+		os.remove(fits_output)
+		
+	## Writing the standard power spectrum to a FITS file
+	thdulist = fits.HDUList([prihdu, tbhdu])
+	thdulist.writeto(fits_output)	
+	
+	## Updating above header for re-binned power spectrum
+	prihdr.set('TYPE', "Re-binned power spectrum")
+	prihdr.insert('DATE', ('UNBINOUT', fits_output, "Corresponding un-binned output."))
+	prihdr.insert('UNBINOUT', ('REBIN', rebin_const, "Freqs re-binned by REBIN * prev_bin_size"))
+	prihdu = fits.PrimaryHDU(header=prihdr)
+	
+	## Making FITS table for re-binned power spectrum
+	col1 = fits.Column(name='Frequency', unit='Hz', format='E', array=rebinned_freq)
+	col2 = fits.Column(name='Power', unit='frac rms^2', format='E', array=rebinned_rms2_power)
+	col3 = fits.Column(name='Error', unit='frac rms^2', format='E', array=err_rebinned_power)
+	cols = fits.ColDefs([col1, col2, col3])
+	tbhdu = fits.BinTableHDU.from_columns(cols)
+	
+	## If the file already exists, remove it (still working on just updating it)
+	rebinned_fits_output = rebinned_out_file[0:-3]+"fits"
+	if os.path.isfile(rebinned_fits_output):
+		print "File previously existed. Removing and rewriting."
+		os.remove(rebinned_fits_output)
+	
+	## Writing the re-binned power spectrum to a FITS file
+	thdulist = fits.HDUList([prihdu, tbhdu])
+	thdulist.writeto(rebinned_fits_output)	
+	
+	## End of function 'fits_output'
+	
 
 ################################################################################
 def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
@@ -297,8 +396,8 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 	i = 0  # start of bin index to make segment of data for inner for-loop
 	j = n_bins  # end of bin index to make segment of data for inner for-loop
 
-	assert dt == (data[1].field(0) - data[0].field(0))
-	print "Length of FITS file:", len(data.field(1))
+	assert dt == (data[1].field(0) - data[0].field(0)), 'ERROR: Specified dt must be same resolution as the FITS data'
+# 	print "Length of FITS file:", len(data.field(1))
 	while j <= len(data.field(1)):  
 	
 		num_segments += 1
@@ -378,11 +477,10 @@ def ascii_powerspec(in_file, n_bins, dt, print_iterator, test):
 				start_time = np.float64(line[0])
 				break
 	if start_time is -99:
-		print "\tERROR: Start time of data was not read in. Exiting."
-		exit()
+		raise Exception("ERROR: Start time of data was not read in. Exiting.")
 		
 	end_time = start_time + (dt * n_bins)
-	assert end_time > start_time
+	assert end_time > start_time, 'ERROR: End time must come after start time of the segment.'
 		
 	with open(in_file, 'r') as f:
 		for line, next_line in tools.pairwise(f):
@@ -468,7 +566,7 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 			 num_segments - Number of segments of data from this input file.
 			 
 	"""
-	assert tools.power_of_two(n_bins)
+	assert tools.power_of_two(n_bins) , 'ERROR: n_bins must be a power of 2.'
 			
 	if (in_file[-3:].lower() == ".lc") or \
 		(in_file[-5:].lower() == ".fits"):
@@ -501,7 +599,7 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 		power_sum, sum_rate_whole, num_segments = ascii_powerspec(in_file, 
 			n_bins, dt, print_iterator, test)
 	
-		## End of 'if/else file is fits format'
+	## End of 'if/else file is fits format'
 	
 	return power_sum, sum_rate_whole, num_segments
 ## End of function 'read_and_use_segments'
@@ -600,12 +698,12 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	Returns: nothing
 	
 	"""	
-	assert rebin_const >= 1.0  # rebin_const must be a float greater than 1
-
+	assert rebin_const >= 1.0 , 'ERROR: Re-binning constant must be >= 1.' 
+	
 	t_res = 1.0 / 8192.0  # The time resolution of the data, in seconds
 	dt = dt_mult * t_res
 	n_bins = num_seconds * int(1.0 / dt)
-	assert tools.power_of_two(n_bins)
+	assert tools.power_of_two(n_bins), 'ERROR: n_bins must be a power of 2.'
 	nyquist_freq = 1.0 / (2.0 * dt)
 	df = 1.0 / float(num_seconds)
 
@@ -619,7 +717,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	print "\tTotal number of segments =", num_segments
 	## Dividing sums by the number of segments to get an arithmetic average.
 	power = power_sum / float(num_segments)
-	assert int(len(power)) == n_bins
+	assert int(len(power)) == n_bins, 'ERROR: Power should have length n_bins.'
 	mean_rate_whole = sum_rate_whole / float(num_segments)
 	print "Mean count rate over whole lightcurve =", mean_rate_whole
 
@@ -629,7 +727,12 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	rebinned_freq, rebinned_rms2_power, err_rebinned_power = \
 		geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const)
 		
-	output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, 
+	ascii_output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, 
+		num_segments, mean_rate_whole, freq, rms2_power, rms2_err_power, 
+		leahy_power, rebin_const, rebinned_freq, rebinned_rms2_power, 
+		err_rebinned_power)
+
+	fits_output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, 
 		num_segments, mean_rate_whole, freq, rms2_power, rms2_err_power, 
 		leahy_power, rebin_const, rebinned_freq, rebinned_rms2_power, 
 		err_rebinned_power)
