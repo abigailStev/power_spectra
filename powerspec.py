@@ -510,8 +510,8 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 				break
 		## End of 'if there are counts in this segment'
 		
-		if num_segments == 170:
-			break
+# 		if num_segments == 170:
+# 			break
 		
 		start_time += (n_bins * dt)
 		end_time += (n_bins * dt)
@@ -571,8 +571,8 @@ def dat_powerspec(in_file, n_bins, dt, print_iterator, test):
 
 	end_time = start_time + (dt * n_bins)
 	assert end_time > start_time, 'ERROR: End time must come after start time of the segment.'
-	print "First start time: %.21f" % start_time
-	print "First end   time: %.21f" % end_time
+# 	print "First start time: %.21f" % start_time
+# 	print "First end   time: %.21f" % end_time
 
 	with open(in_file, 'r') as f:
 		for line, next_line in tools.pairwise(f):
@@ -594,11 +594,11 @@ def dat_powerspec(in_file, n_bins, dt, print_iterator, test):
 				
 				if next_time > end_time:  # Triggered at the end of a segment
 
-					print "\nLen time:", len(time)
-					print "Start: %.21f" % start_time
-					print "End  : %.21f" % end_time
-					if len(time) == 1:
-						print "One: %.21f" % time[0]
+# 					print "\nLen time:", len(time)
+# 					print "Start: %.21f" % start_time
+# 					print "End  : %.21f" % end_time
+# 					if len(time) == 1:
+# 						print "One: %.21f" % time[0]
 
 					if len(time) > 0:
 						num_segments += 1
@@ -615,7 +615,7 @@ def dat_powerspec(in_file, n_bins, dt, print_iterator, test):
 						if num_segments % print_iterator == 0:
 							print "\t", num_segments
 # 							print "\t", len(time)
-							print "\t%.21f" % end_time
+# 							print "\t%.21f" % end_time
 
 						## Clearing variables from memory
 						power_segment = None
@@ -627,8 +627,6 @@ def dat_powerspec(in_file, n_bins, dt, print_iterator, test):
 					
 						if test and (num_segments == 1):  # Testing
 							np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
-							break
-						if num_segments == 170:
 							break
 					## End of 'if there are counts in this segment'
 					
@@ -645,7 +643,7 @@ def dat_powerspec(in_file, n_bins, dt, print_iterator, test):
 			## End of 'if the line is not a comment'
 		## End of for-loop 
 	## End of with-block
-	print "Final end time: %.21f" % end_time
+# 	print "Final end time: %.21f" % end_time
 	return power_sum, sum_rate_whole, num_segments
 ## End of function 'dat_powerspec'
 	
