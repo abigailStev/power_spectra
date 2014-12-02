@@ -158,7 +158,7 @@ def fits_output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 	prihdr.set('N_BINS', n_bins, "time bins per segment")
 	prihdr.set('SEGMENTS', num_segments, "segments in the whole light curve")
 	prihdr.set('EXPOSURE', num_segments * n_bins * dt, "seconds, of light curve")
-	prihdr.set('MEANRATE', mean_rate_whole, "counts / second")
+	prihdr.set('MEANRATE', mean_rate_whole, "counts/second")
 	prihdr.set('NYQUIST', nyquist_freq, "Hz")
 	prihdu = fits.PrimaryHDU(header=prihdr)
 	
@@ -214,7 +214,7 @@ def fits_output(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 	thdulist = fits.HDUList([prihdu, tbhdu])
 	thdulist.writeto(rebinned_out_file)	
 	
-	## End of function 'fits_output'
+## End of function 'fits_output'
 	
 
 ################################################################################
@@ -347,7 +347,7 @@ def make_ps(rate):
 
 
 ################################################################################
-def extracted_powerspec(in_file, n_bins, dt, print_iterator, test):
+def extracted_input(in_file, n_bins, dt, print_iterator, test):
 	"""
 			extracted_powerspec
 	
@@ -413,13 +413,13 @@ def extracted_powerspec(in_file, n_bins, dt, print_iterator, test):
 	## End of while-loop
 		
 	return power_sum, sum_rate_whole, num_segments
-## End of function 'extracted_powerspec'
+## End of function 'extracted_input'
 
 
 ################################################################################
-def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
+def fits_input(in_file, n_bins, dt, print_iterator, test):
 	"""
-			fits_powerspec
+			fits_input
 	
 	Opens the .fits GTI'd event list, reads the count rate for a segment, 
 	populates the light curve, calls 'make_ps' to create a power spectrum, adds 
@@ -458,30 +458,29 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 
 	PCU2_mask = data.field('PCUID') == 2
 	data = data[PCU2_mask]
-	time = np.asarray(data.field('TIME'), dtype=np.float64)
-	energy = np.asarray(data.field('CHANNEL'), dtype=np.float64)
+	all_time = np.asarray(data.field('TIME'), dtype=np.float64)
+	all_energy = np.asarray(data.field('CHANNEL'), dtype=np.float64)
 
 	while end_time <= final_time:
 			
-		this_time = time[np.where(time <= end_time)]
-		this_energy = energy[np.where(time <= end_time)]
+		time = all_time[np.where(all_time < end_time)]
+		energy = all_energy[np.where(all_time < end_time)]
 		
-		for_next_iteration = np.where(time > end_time)
-		time = time[for_next_iteration]
-		energy = energy[for_next_iteration]
+		for_next_iteration = np.where(all_time >= end_time)
+		all_time = all_time[for_next_iteration]
+		all_energy = all_energy[for_next_iteration]
 
-# 		print "Len of time:", len(time)
-# 		print "Len of this time:", len(this_time)
-# 		print "\nLen time:", len(this_time)
+# 		print "Len of time:", len(all_time)
+# 		print "\nLen time:", len(time)
 # 		print "Start: %.21f" % start_time
 # 		print "End  : %.21f" % end_time
-# 		if len(this_time) == 1:
-# 			print "One: %.21f" % this_time[0]# 		if len(this_time) == 0:
+# 		if len(time) == 1:
+# 			print "One: %.21f" % time[0]# 		if len(this_time) == 0:
 # 			print "Len of time = 0"
-		if len(this_time) > 0:
+		if len(time) > 0:
 			num_segments += 1
-			rate_2d, rate_1d = tools.make_lightcurve(this_time, 
-				this_energy, n_bins, dt, start_time)
+			rate_2d, rate_1d = tools.make_lightcurve(time, 
+				energy, n_bins, dt, start_time)
 			lightcurve = np.concatenate((lightcurve, rate_1d))
 						
 			power_segment, mean_rate_segment = make_ps(rate_1d)
@@ -496,10 +495,9 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 # 				print "\t", len(this_time)
 # 				print "\t%.21f" % end_time
 
-
 			## Clearing variables from memory
-			this_time = None
-			this_energy = None
+			time = None
+			energy = None
 			power_segment = None
 			mean_rate_segment = None
 			rate_2d = None
@@ -519,13 +517,13 @@ def fits_powerspec(in_file, n_bins, dt, print_iterator, test):
 	## End of while-loop
 # 	print "Final end time: %.21f" % end_time
 	return power_sum, sum_rate_whole, num_segments
-## End of function 'fits_powerspec'
+## End of function 'fits_input'
 
 
 ################################################################################
-def dat_powerspec(in_file, n_bins, dt, print_iterator, test):
+def dat_input(in_file, n_bins, dt, print_iterator, test):
 	"""
-			dat_powerspec
+			dat_input
 		
 	Opens the .dat GTI'd event list, reads the count rate for a segment, 
 	populates the light curve, calls 'make_ps' to create a power spectrum, 
@@ -592,7 +590,7 @@ def dat_powerspec(in_file, n_bins, dt, print_iterator, test):
 				next_time = float(next_line[0])
 				next_end_time = end_time + (dt * n_bins)
 				
-				if next_time > end_time:  # Triggered at the end of a segment
+				if next_time >= end_time:  # Triggered at the end of a segment
 
 # 					print "\nLen time:", len(time)
 # 					print "Start: %.21f" % start_time
@@ -633,19 +631,20 @@ def dat_powerspec(in_file, n_bins, dt, print_iterator, test):
 					start_time += (n_bins * dt)
 					end_time += (n_bins * dt)
 					
-					## This next bit helps it handle gappy data
-					if next_time > end_time:
-						while next_time > end_time:
+					## This next bit helps it handle gappy data; keep in mind 
+					## that end_time has already been incremented here
+					if next_time >= end_time:
+						while next_time >= end_time:
 							start_time += (n_bins * dt)
 							end_time += (n_bins * dt)
 
-				## End of 'if we're at the end of a segment'
+				## End of 'if it`s at the end of a segment'
 			## End of 'if the line is not a comment'
 		## End of for-loop 
 	## End of with-block
-# 	print "Final end time: %.21f" % end_time
+
 	return power_sum, sum_rate_whole, num_segments
-## End of function 'dat_powerspec'
+## End of function 'dat_input'
 	
 
 ################################################################################
@@ -655,8 +654,8 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 			
 	Opens the file, reads in the count rate, calls 'make_ps' to create a
 	power spectrum. Separated from main body like this so I can easily call it 
-	in multi_powerspec.py. Split into 'fits_powerspec', 'dat_powerspec', and
-	'extracted_powerspec' for easier readability.
+	in multi_powerspec.py. Split into 'fits_input', 'dat_input', and
+	'extracted_input' for easier readability.
 	
 	Passed: in_file - Name of input file with time in column 1 and rate in 
 				column 2. Must have extension .dat, .fits, or .lc.
@@ -694,23 +693,23 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 	## power spectrum can be taken, whereas data from lc was made in seextrct 
 	## and so it's already populated as a light curve
 	if (in_file[-5:].lower() == ".fits"):
-		power_sum, sum_rate_whole, num_segments = fits_powerspec(in_file, 
+		power_sum, sum_rate_whole, num_segments = fits_input(in_file, 
 			n_bins, dt, print_iterator, test)
 	elif (in_file[-4:].lower() == ".dat"):
-		power_sum, sum_rate_whole, num_segments = dat_powerspec(in_file, 
+		power_sum, sum_rate_whole, num_segments = dat_input(in_file, 
 			n_bins, dt, print_iterator, test)
 	elif (in_file[-3:].lower() == ".lc"):
-		power_sum, sum_rate_whole, num_segments = extracted_powerspec(in_file, 
+		power_sum, sum_rate_whole, num_segments = extracted_input(in_file, 
 			n_bins, dt, print_iterator, test)
 	else:
-		raise Exception("ERROR: Input file type not recognized. Must be .dat, .fits. or .lc.")
+		raise Exception("ERROR: Input file type not recognized. Must be .dat, .fits, or .lc.")
 	
 	return power_sum, sum_rate_whole, num_segments
 ## End of function 'read_and_use_segments'
 
 
 ###############################################################################
-def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate):
+def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate, noisy):
 	"""
 			normalize
 	
@@ -724,6 +723,8 @@ def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate):
 			num_seconds - Length of each Fourier segment, in seconds.
 			num_segments - Number of segments the light curve is broken up into.
 			mean_rate - The mean count rate over all segments of data.
+			noisy - True if data has Poisson noise; only False if using this 
+				function with a simulation
 	
 	Returns: freq - The Fourier frequencies.
 			 power - The power spectrum averaged over all segments (just the 
@@ -755,7 +756,8 @@ def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate):
 
 	## Fractional rms^2 normalization with noise subtracted off
 	rms2_power = 2.0 * power * dt / float(n_bins) / (mean_rate ** 2)
-	rms2_power -= 2.0 / mean_rate
+	if noisy:
+		rms2_power -= 2.0 / mean_rate
 	
 	## Error on fractional rms^2 power (not subtracting noise)
 	rms2_err_power = 2.0 * err_power * dt / float(n_bins) / mean_rate ** 2
@@ -772,6 +774,7 @@ def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate):
 	signal_pow = np.float64(rms2_power[j_min:j_max])
 	## Computing variance and rms of the signal
 	signal_variance = np.sum(signal_pow * df)
+	print "Signal variance:", signal_variance
 	rms = np.sqrt(signal_variance)  # should be a few % in frac rms units
 	print "RMS of signal:", rms
 	
@@ -826,7 +829,7 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	print "Mean count rate over whole lightcurve =", mean_rate_whole
 
 	freq, power, leahy_power, rms2_power, rms2_err_power = normalize(power, \
-		n_bins, dt, num_seconds, num_segments, mean_rate_whole)
+		n_bins, dt, num_seconds, num_segments, mean_rate_whole, True)
 	
 	rebinned_freq, rebinned_rms2_power, err_rebinned_power = \
 		geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const)
