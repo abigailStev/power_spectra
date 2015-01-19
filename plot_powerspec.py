@@ -2,13 +2,17 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
+import matplotlib.font_manager as font_manager
+
+__author__ = "Abigail Stevens"
+__author_email__ = "A.L.Stevens@uva.nl"
+__year__ = "2013-2014"
+__description__ = "Plots a power spectrum in the frequency domain."
 
 """
 		plot_powerspec.py
 
-Plots a power spectrum in the frequency domain.
-
-Written in Python 2.7 by A.L. Stevens, A.L.Stevens@uva.nl, 2013-2014
+Written in Python 2.7.
 
 All modules imported above, as well as python 2.7, can be downloaded in the 
 Anaconda package, https://store.continuum.io/cshop/anaconda/
@@ -49,16 +53,19 @@ if __name__ == "__main__":
 		
 	vpv = freq * rms2
 
-	fig, ax = plt.subplots()
+	font_prop = font_manager.FontProperties(size=16)
+
+	fig, ax = plt.subplots(1,1)
 	ax.plot(freq, rms2, linewidth=2)
-# 	plt.errorbar(freq, rms2, xerr=None, yerr=error)
-	plt.xlabel(r'$\nu$ [Hz]')
-	plt.ylabel(r'Noise-subtracted fractional rms$^2$ power')
-	plt.xlim(0,1000)
-	plt.ylim(0, )
-# 	plt.xscale('symlog') # this works much better than 'log'
-# 	plt.yscale('symlog')
-	plt.title("Power spectrum, " + args.propID)
+# 	ax.errorbar(freq, rms2, xerr=None, yerr=error)
+	ax.set_xlabel(r'$\nu$ [Hz]', fontproperties=font_prop)
+	ax.set_ylabel(r'Power, noise-subtracted fractional rms$^2$', fontproperties=font_prop)
+	ax.set_xlim(0,1000)
+	ax.set_ylim(0, )
+	ax.tick_params(axis='x', labelsize=14)
+	ax.tick_params(axis='y', labelsize=14)
+# 	ax.set_title("Power spectrum, " + args.propID, fontproperties=font_prop)
+	
 	plt.savefig(args.plot_file, dpi=120)
 # 	plt.show()
 	plt.close()
