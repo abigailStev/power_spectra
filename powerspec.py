@@ -4,22 +4,21 @@ from scipy import fftpack
 from astropy.io import fits
 from datetime import datetime
 import os
+import tools  # https://github.com/abigailStev/whizzy_scripts
 
-import tools
-
-__author__ ="Abigail Stevens <A.L.Stevens@uva.nl>"
+__author__ = "Abigail Stevens"
+__author_email__ = "A.L.Stevens@uva.nl"
+__year__ = "2013-2014"
+__description__ = "Makes a power spectrum averaged over segments from an RXTE \
+event-mode data file."
 
 """
 		powerspec.py
 
-Makes a power spectrum from an event-mode data file from RXTE.
-
-Written in Python 2.7 by A.L. Stevens, A.L.Stevens@uva.nl, 2013-2014
+Written in Python 2.7.
 
 The scientific modules imported above, as well as python 2.7, can be downloaded 
 in the Anaconda package, https://store.continuum.io/cshop/anaconda/
-
-tools is available at https://github.com/abigailStev/whizzy_scripts
 
 """
 
@@ -33,9 +32,7 @@ def dat_out(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 			
 	Writes power spectrum and re-binned power spectrum to two ASCII output 
 	files.
-		
-	Variables same as fits_out.
-	
+			
 	"""
 	print "Standard output file: %s" % out_file
 	
@@ -108,32 +105,7 @@ def fits_out(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 				fits_out
 			
 	Writes power spectrum and re-binned power spectrum to two FITS files.
-		
-	Passed: out_file - Name of output file for standard power spectrum.
-			rebinned_out_file - Name of output file for geometrically re-binned 
-				power spectrum.
-			in_file - Full path of filename containing input data.
-			dt - Size of time bin, in seconds (must be power of 2).
-			n_bins - Number of time bins in a segment (must be power of 2).
-			nyquist_freq - Nyquist frequency = 1/(2*dt)
-			num_segments - Number of segments in the light curve.
-			mean_rate_whole - Mean count rate of the light curve.
-			freq - Frequencies (in Hz) corresponding to the power spectrum.
-			leahy_power - Leahy-normalized power, averaged over all
-				segments of the light curve.
-			rms2_power - Fractional rms power, averaged over all 
-				segments of the light curve and all light curves.
-			rms2_err_power - Error on avg fractional rms power.
-			rebin_const - Constant >1 by which we want to re-bin the spectrum,
-				such that bin_size[n+1] = bin_size[n] * rebin_const.
-			rebinned_freq - Frequencies of power spectrum re-binned
-				according to rebin_const.
-			rebinned_rms2_power - Power spectrum re-binned according to 
-				rebin_const.
-			err_rebinned_power - Error on re-binned fractional rms 
-				power.
-
-	Returns: nothing
+	
 	"""
 	print "Standard output file: %s" % out_file
 
@@ -213,34 +185,21 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 	Re-bins the noise-subtracted fractional rms^2 power spectrum in frequency 
 	space by some re-binning constant (rebin_const>1). 
 
-	Passed: rms2_power - Fractional rms^2 power, averaged over all segments
-				in the light curve.
-			rms2_err_power - Error on the fractional rms^2 power.
-			freq - Frequencies (in Hz) corresponding to the power spectrum.
-			rebin_const - Constant >1 by which we want to re-bin the spectrum, 
-				such that bin_size[n+1] = bin_size[n] * rebin_const.
-	
-	Returns: rebinned_freq - Frequencies of power spectrum re-binned according 
-				to rebin_const.
-			 rebinned_rms2_power - Power spectrum re-binned according to 
-			 	rebin_const.
-			 err_rebinned_power - Error on the re-binned rms power.
-	
 	"""
 	## Initializing variables
-	rebinned_rms2_power = []	 # List of re-binned fractional rms power
-	rebinned_freq = []		 # List of re-binned frequencies
-	err_rebinned_power = []	 # List of error in re-binned power
-	real_index = 1.0		 # The unrounded next index in power
-	int_index = 1			 # The int of real_index, added to current_m every 
-							 #  iteration
-	current_m = 1			 # Current index in power
-	prev_m = 0				 # Previous index m
-	bin_power = 0.0			 # The power of the current re-binned bin
-	bin_freq = 0.0			 # The frequency of the current re-binned bin
-	err_bin_power2 = 0.0	 # The error squared on 'bin_power'
-	bin_range = 0.0			 # The range of un-binned bins covered by this 
-							 #  re-binned bin
+	rebinned_rms2_power = []  # List of re-binned fractional rms power
+	rebinned_freq = []		  # List of re-binned frequencies
+	err_rebinned_power = []	  # List of error in re-binned power
+	real_index = 1.0		  # The unrounded next index in power
+	int_index = 1			  # The int of real_index, added to current_m every 
+							  #  iteration
+	current_m = 1			  # Current index in power
+	prev_m = 0				  # Previous index m
+	bin_power = 0.0			  # The power of the current re-binned bin
+	bin_freq = 0.0			  # The frequency of the current re-binned bin
+	err_bin_power2 = 0.0	  # The error squared on 'bin_power'
+	bin_range = 0.0			  # The range of un-binned bins covered by this 
+							  #  re-binned bin
 	
 	## Looping through the length of the array power, geometric bin by 
 	## geometric bin, to compute the average power and frequency of that
@@ -255,43 +214,34 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 		bin_range = 0.0
 		bin_freq = 0.0
 		
-		## Want mean of data points contained within one geometric bin
-		bin_power = np.mean(rms2_power[prev_m:current_m])
-		err_bin_power2 = np.mean(rms2_err_power[prev_m:current_m] ** 2)
-		
 		## Determining the range of indices this specific geometric bin covers
 		bin_range = np.absolute(current_m - prev_m)
+		## Want mean of data points contained within one geometric bin
+		bin_power = np.mean(rms2_power[prev_m:current_m])
+		## Computing error in bin -- equation from Adam Ingram's thesis
+		err_bin_power2 = np.sqrt(np.sum(rms2_err_power[prev_m:current_m] ** 2)) / float(bin_range) 
 		
 		## Computing the mean frequency of a geometric bin
-		bin_freq = ((freq[current_m] - freq[prev_m]) / bin_range) + freq[prev_m]
+		bin_freq = np.mean(freq[prev_m:current_m])
 
-		## If there's only one data point in the geometric bin, there's no need
-		## to take an average. This also prevents it from skipping the first 
-		## data point.
-		if bin_range == 1:
-			bin_power = rms2_power[prev_m]
-			bin_freq = freq[prev_m]
-		
 		## Appending values to arrays
 		rebinned_rms2_power.append(bin_power)
 		rebinned_freq.append(bin_freq)
-		## Computing error in bin -- equation from Adam Ingram's thesis
-		err_rebinned_power.append(np.sqrt(err_bin_power2) / float(bin_range))
+		err_rebinned_power.append(err_bin_power2)
 		
 		## Incrementing for the next iteration of the loop
+		## Since the for-loop goes from prev_m to current_m-1 (since that's how
+		## the range function and array slicing works) it's ok that we set 
+		## prev_m = current_m here for the next round. This will not cause any
+		## double-counting bins or skipping bins.
 		prev_m = current_m
 		real_index *= rebin_const
 		int_index = int(round(real_index))
 		current_m += int_index
-		## Since the for-loop goes from prev_m to current_m-1 (since that's how
-		## the range function works) it's ok that we set prev_m = current_m here
-		## for the next round. This will not cause any double-counting bins or 
-		## skipping bins.
 		bin_range = None
 		bin_freq = None
 		bin_power = None
-		err_bin_power2 = None
-		
+		err_bin_power2 = None	
 	## End of while-loop
 		
 	return rebinned_freq, rebinned_rms2_power, err_rebinned_power
@@ -307,21 +257,6 @@ def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate, noisy):
 	the power by Leahy and fractional rms^2 normalizations, and computes the 
 	error on the fractional rms^2 power.
 	
-	Passed: power - The power spectrum averaged over all segments.
-			n_bins - Number of bins per segment.
-			dt - Timestep between bins, in seconds.
-			num_seconds - Length of each Fourier segment, in seconds.
-			num_segments - Number of segments the light curve is broken up into.
-			mean_rate - The mean count rate over all segments of data.
-			noisy - True if data has Poisson noise; only False if using this 
-				function with a simulation
-	
-	Returns: freq - The Fourier frequencies.
-			 power - The power spectrum averaged over all segments (just the 
-			 	ones with positive Fourier frequencies). 
-			 leahy_power - The Leahy-normalized power.
-			 rms2_power - The noise-subtracted fractional rms^2 power.
-			 rms2_err_power - The error on the fractional rms^2 power.
 	"""
 	## Computing the FFT sample frequencies (in Hz)
 	freq = fftpack.fftfreq(n_bins, d=dt)
@@ -380,23 +315,15 @@ def make_ps(rate):
 	Computes the mean count rate, the FFT of the count rate minus the mean, and 
 	the power spectrum of this segment of data.
 	
-	Passed: rate - Count rate for this segment of data.
-	
-	Returns: power_segment - Power spectra for this segment of data.
-			 mean_rate - Mean count rate for this segment of data.
-	
 	""" 
 	## Computing the mean count rate of the segment
 	mean_rate = np.mean(rate)
-
 	## Subtracting the mean rate off each value of 'rate'
 	##  This eliminates the spike at 0 Hz 
 	rate_sub_mean = rate - mean_rate
-	
 	## Taking the 1-dimensional FFT of the time-domain photon count rate
 	##  Using the SciPy FFT algorithm, as it's faster than NumPy for large lists
 	fft_data = fftpack.fft(rate_sub_mean)
-
 	## Computing the power
 	power_segment = np.absolute(fft_data) ** 2
 	
@@ -412,20 +339,7 @@ def extracted_in(in_file, n_bins, dt, print_iterator, test):
 	Opens the FITS file light curve (as created in seextrct), reads the count 
 	rate for a segment, calls 'make_ps' to create a power spectrum, adds power 
 	spectra over all segments.
-	
-	Passed: in_file - Name of .lc (type FITS) input file/light curve.
-			n_bins - Number of integer bins per segment. Must be a power of 2.
-			dt - Time step between bins, in seconds. Must be a power of 2.
-			print_iterator - Prints out which segment we're on every 
-				'print_iterator' segments, to keep track of progress.
-			test - True if computing one segment, False if computing all.
-	
-	Returns: power_sum - Sum of power spectra for all segments of data from this
-				input file.
-			 sum_rate_whole - Sum of the mean count rate for all segments of 
-			 	data from this input file.
-			 num_segments - Number of segments of data from this input file.
-			 
+		 
 	"""	
 	fits_hdu = fits.open(in_file)
 	header = fits_hdu[1].header	
@@ -435,11 +349,11 @@ def extracted_in(in_file, n_bins, dt, print_iterator, test):
 	sum_rate_whole = 0
 	power_sum = np.zeros(n_bins, dtype=np.float64)
 	num_segments = 0
-
 	i = 0  # start of bin index to make segment of data for inner for-loop
 	j = n_bins  # end of bin index to make segment of data for inner for-loop
 
-	assert dt == (data[1].field(0) - data[0].field(0)), 'ERROR: Specified dt must be same resolution as the FITS data'
+	assert dt == (data[1].field(0) - data[0].field(0)), \
+		'ERROR: dt must be the same resolution as the extracted FITS data.'
 # 	print "Length of FITS file:", len(data.field(1))
 	while j <= len(data.field(1)):  
 	
@@ -467,7 +381,6 @@ def extracted_in(in_file, n_bins, dt, print_iterator, test):
 		## Since the for-loop goes from i to j-1 (since that's how the range 
 		## function works) it's ok that we set i=j here for the next round. 
 		## This will not cause double-counting rows or skipping rows.
-       
 	## End of while-loop
 		
 	return power_sum, sum_rate_whole, num_segments
@@ -482,19 +395,6 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 	Opens the .fits GTI'd event list, reads the count rate for a segment, 
 	populates the light curve, calls 'make_ps' to create a power spectrum, adds 
 	power spectra over all segments.
-	
-	Passed: in_file - Name of .fits input file/light curve.
-			n_bins - Number of integer bins per segment. Must be a power of 2.
-			dt - Time step between bins, in seconds. Must be a power of 2.
-			print_iterator - Prints out which segment we're on every 
-				'print_iterator' segments, to keep track of progress.
-			test - True if computing one segment, False if computing all.
-	
-	Returns: power_sum - Sum of power spectra for all segments of data from this
-				input file.
-			 sum_rate_whole - Sum of the mean count rate for all segments of 
-			 	data from this input file.
-			 num_segments - Number of segments of data from this input file.
 			 
 	"""	
 	fits_hdu = fits.open(in_file)
@@ -590,20 +490,6 @@ def dat_in(in_file, n_bins, dt, print_iterator, test):
 		
 	Assumes that all event times have been corrected with TIMEZERO, and 
 	GTI-filtered.
-	
-	Passed: in_file - Name of .dat event list, still to be 'populated'.
-			n_bins - Number of integer bins per segment. Must be a power of 2.
-			dt - Desired time step between bins of populated light curve, in 
-				seconds. Must be a power of 2.
-			print_iterator - Prints out which segment we're on every 
-				'print_iterator' segments, to keep track of progress.
-			test - True if computing a few segments, False if computing all.
-	
-	Returns: power_sum - Sum of power spectra for all segments of data from this
-				input file.
-			 sum_rate_whole - Sum of the mean count rate for all segments of 
-			 	data from this input file.
-			 num_segments - Number of segments of data from this input file.
 			 
 	"""	
 	## Declaring clean variables to append to for every loop iteration.
@@ -612,7 +498,6 @@ def dat_in(in_file, n_bins, dt, print_iterator, test):
 	sum_rate_whole = 0
 	power_sum = np.zeros(n_bins, dtype=np.float64)
 	num_segments = 0
-	
 	lightcurve = np.asarray([])
 	
 	## Reading only the first line of data to get the start time of the file
@@ -685,17 +570,16 @@ def dat_in(in_file, n_bins, dt, print_iterator, test):
 						if test and (num_segments == 1):  # Testing
 							np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
 							break
-					## End of 'if there are counts in this segment'
-					
-					start_time += (n_bins * dt)
-					end_time += (n_bins * dt)
-					
+
+						start_time += (n_bins * dt)
+						end_time += (n_bins * dt)
+						
 					## This next bit helps it handle gappy data; keep in mind 
 					## that end_time has already been incremented here
-					if next_time >= end_time:
+					elif len(time) == 0:
 						start_time = next_time
-                		end_time = start_time + (n_bins * dt)
-
+                		end_time = start_time + (n_bins * dt)	
+					## End of 'if there are counts in this segment'
 				## End of 'if it`s at the end of a segment'
 			## End of 'if the line is not a comment'
 		## End of for-loop 
@@ -714,19 +598,7 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 	power spectrum. Separated from main body like this so I can easily call it 
 	in multi_powerspec.py. Split into 'fits_in', 'dat_in', and
 	'extracted_in' for easier readability.
-	
-	Passed: in_file - Name of input file with time in column 1 and rate in 
-				column 2. Must have extension .dat, .fits, or .lc.
-			n_bins - Number of integer bins per segment. Must be a power of 2.
-			dt - Time step between bins, in seconds. Must be a power of 2.
-			test - True if computing few segments, False if computing all.
-	
-	Returns: power_sum - Sum of power spectra for all segments of data from this
-				input file.
-			 sum_rate_whole - Sum of the mean count rate for all segments of 
-			 	data from this input file.
-			 num_segments - Number of segments of data from this input file.
-			 
+		 
 	"""
 	assert tools.power_of_two(n_bins) , 'ERROR: n_bins must be a power of 2.'
 	
@@ -771,22 +643,6 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	dt_mult, test):
 	""" 
 			main
-	
-	Passed: in_file - Name of input file with time in column 1 and rate in 
-				column 2. FITS format must have extension .lc or .fits, 
-				otherwise assumes .dat (ASCII/txt) format.
-			out_file - Name of output file for standard power spectrum.
-			rebinned_out_file - Name of output file for re-binned power 
-				spectrum.
-			num_seconds - Number of seconds in each Fourier segment. Must be a 
-				power of 2.
-			rebin_const - Used to re-bin the data geometrically after the 
-				average power is computed, such that 
-				bin_size[n+1] = bin_size[n] * rebin_const.
-			dt_mult - Multiple of 1/8192 seconds for timestep between bins.
-			test - True if computing 1 segment, False if computing all.
-	
-	Returns: nothing
 	
 	"""	
 	assert rebin_const >= 1.0 , 'ERROR: Re-binning constant must be >= 1.' 
