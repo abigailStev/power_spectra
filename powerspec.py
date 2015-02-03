@@ -8,7 +8,7 @@ import tools  # https://github.com/abigailStev/whizzy_scripts
 
 __author__ = "Abigail Stevens"
 __author_email__ = "A.L.Stevens@uva.nl"
-__year__ = "2013-2014"
+__year__ = "2013-2015"
 __description__ = "Makes a power spectrum averaged over segments from an RXTE \
 event-mode data file."
 
@@ -23,18 +23,15 @@ in the Anaconda package, https://store.continuum.io/cshop/anaconda/
 """
 
 ################################################################################
-def dat_out(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, 
-	num_segments, mean_rate_whole, freq, rms2_power, rms2_err_power, 
-	leahy_power, rebin_const, rebinned_freq, rebinned_rms2_power, 
-	err_rebinned_power):
+def dat_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
+	mean_rate_whole, freq, rms2_power, rms2_err_power, leahy_power):
 	""" 
 			dat_out
 			
-	Writes power spectrum and re-binned power spectrum to two ASCII output 
-	files.
+	Writes power spectrum to an ASCII output file.
 			
 	"""
-	print "Standard output file: %s" % out_file
+	print "Output file: %s" % out_file
 	
 	with open(out_file, 'w') as out:
 		out.write("#\t\tPower spectrum")
@@ -63,51 +60,20 @@ def dat_out(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 			## End of if-statement
 		## End of for-loop
 	## End of with-block
-	
-	## Now outputting the re-binned data -- Need to do this separately since it
-	## has a different number of data points from the regular power spectrum.
-	
-	print "Re-binned output file: %s" % rebinned_out_file
-	
-	with open(rebinned_out_file, 'w') as out:
-		out.write("#\t\tPower spectrum")
-		out.write("\n# Data: %s" % in_file)
-		out.write("\n# Re-binned in frequency at (%.4f * prev bin size)" \
-			% rebin_const)
-		out.write("\n# Corresponding un-binned output file: %s" % out_file)
-		out.write("\n# Original time bin size = %.21f seconds" % dt)
-		out.write("\n# Exposure time = %d seconds" \
-			% (num_segments * n_bins * dt))
-		out.write("\n# Mean count rate = %.8f" % mean_rate_whole)
-		out.write("\n# ")
-		out.write("\n# Column 1: Frequency [Hz]")
-		out.write("\n# Column 2: Fractional rms^2 normalized mean power")
-		out.write("\n# Column 3: Error in fractional rms^2 normalized mean \
-			power")
-		out.write("\n# ")
-		for k in xrange(len(rebinned_rms2_power)):
-			if rebinned_freq[k] >= 0:
-				out.write("\n{0:.8f}\t{1:.8f}\t{2:.8f}".format(rebinned_freq[k],
-                    rebinned_rms2_power[k], err_rebinned_power[k]))
-			## End of if-statement
-		## End of for-loop
-	## End of with-block
 
 ## End of function 'dat_out'
 
 
 ################################################################################
-def fits_out(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq, 
-	num_segments, mean_rate_whole, freq, rms2_power, rms2_err_power, 
-	leahy_power, rebin_const, rebinned_freq, rebinned_rms2_power, 
-	err_rebinned_power):
+def fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
+	mean_rate_whole, freq, rms2_power, rms2_err_power, leahy_power):
 	"""
 				fits_out
 			
-	Writes power spectrum and re-binned power spectrum to two FITS files.
+	Writes power spectrum to a FITS file.
 	
 	"""
-	print "Standard output file: %s" % out_file
+	print "Output file: %s" % out_file
 
 	## Making header for standard power spectrum
 	prihdr = fits.Header()
@@ -142,110 +108,8 @@ def fits_out(out_file, rebinned_out_file, in_file, dt, n_bins, nyquist_freq,
 	## Writing the standard power spectrum to a FITS file
 	thdulist = fits.HDUList([prihdu, tbhdu])
 	thdulist.writeto(out_file)	
-	
-	## Now outputting the re-binned data -- Need to do this separately since it
-	## has a different number of data points from the regular power spectrum.
-	print "Re-binned output file: %s" % rebinned_out_file
 
-	## Updating above header for re-binned power spectrum
-	prihdr.set('TYPE', "Re-binned power spectrum")
-	prihdr.insert('DATE', ('UNBINOUT', out_file, "Corresponding un-binned output."))
-	prihdr.insert('UNBINOUT', ('REBIN', rebin_const, "Freqs re-binned by REBIN * prev_bin_size"))
-	prihdu = fits.PrimaryHDU(header=prihdr)
-	
-	## Making FITS table for re-binned power spectrum
-	col1 = fits.Column(name='FREQUENCY', unit='Hz', format='E', \
-		array=rebinned_freq)
-	col2 = fits.Column(name='POWER', unit='frac rms^2', format='E', \
-		array=rebinned_rms2_power)
-	col3 = fits.Column(name='ERROR', unit='frac rms^2', format='E', \
-		array=err_rebinned_power)
-	cols = fits.ColDefs([col1, col2, col3])
-	tbhdu = fits.BinTableHDU.from_columns(cols)
-	
-	## If the file already exists, remove it (still working on just updating it)
-	assert rebinned_out_file[-4:].lower() == "fits", \
-		'ERROR: Re-binned output file must have extension ".fits".'
-	if os.path.isfile(rebinned_out_file):
-# 		print "File previously existed. Removing and rewriting."
-		os.remove(rebinned_out_file)
-	
-	## Writing the re-binned power spectrum to a FITS file
-	thdulist = fits.HDUList([prihdu, tbhdu])
-	thdulist.writeto(rebinned_out_file)	
-	
 ## End of function 'fits_out'
-	
-
-################################################################################
-def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
-	"""
-			geometric_rebinning
-			
-	Re-bins the noise-subtracted fractional rms^2 power spectrum in frequency 
-	space by some re-binning constant (rebin_const>1). 
-
-	"""
-	## Initializing variables
-	rebinned_rms2_power = []  # List of re-binned fractional rms power
-	rebinned_freq = []		  # List of re-binned frequencies
-	err_rebinned_power = []	  # List of error in re-binned power
-	real_index = 1.0		  # The unrounded next index in power
-	int_index = 1			  # The int of real_index, added to current_m every 
-							  #  iteration
-	current_m = 1			  # Current index in power
-	prev_m = 0				  # Previous index m
-	bin_power = 0.0			  # The power of the current re-binned bin
-	bin_freq = 0.0			  # The frequency of the current re-binned bin
-	err_bin_power2 = 0.0	  # The error squared on 'bin_power'
-	bin_range = 0.0			  # The range of un-binned bins covered by this 
-							  #  re-binned bin
-	
-	## Looping through the length of the array power, geometric bin by 
-	## geometric bin, to compute the average power and frequency of that
-	## geometric bin.
-	## Equations for frequency, power, and error on power are from Adam Ingram's
-	## PhD thesis
-	while current_m < len(rms2_power):
-# 	while current_m < 100: # used for debugging
-		## Initializing clean variables for each iteration of the while-loop
-		bin_power = 0.0  # the averaged power at each index of rebinned_power
-		err_bin_power2 = 0.0  # the square of the errors on powers in this bin
-		bin_range = 0.0
-		bin_freq = 0.0
-		
-		## Determining the range of indices this specific geometric bin covers
-		bin_range = np.absolute(current_m - prev_m)
-		## Want mean of data points contained within one geometric bin
-		bin_power = np.mean(rms2_power[prev_m:current_m])
-		## Computing error in bin -- equation from Adam Ingram's thesis
-		err_bin_power2 = np.sqrt(np.sum(rms2_err_power[prev_m:current_m] ** 2)) / float(bin_range) 
-		
-		## Computing the mean frequency of a geometric bin
-		bin_freq = np.mean(freq[prev_m:current_m])
-
-		## Appending values to arrays
-		rebinned_rms2_power.append(bin_power)
-		rebinned_freq.append(bin_freq)
-		err_rebinned_power.append(err_bin_power2)
-		
-		## Incrementing for the next iteration of the loop
-		## Since the for-loop goes from prev_m to current_m-1 (since that's how
-		## the range function and array slicing works) it's ok that we set 
-		## prev_m = current_m here for the next round. This will not cause any
-		## double-counting bins or skipping bins.
-		prev_m = current_m
-		real_index *= rebin_const
-		int_index = int(round(real_index))
-		current_m += int_index
-		bin_range = None
-		bin_freq = None
-		bin_power = None
-		err_bin_power2 = None	
-	## End of while-loop
-		
-	return rebinned_freq, rebinned_rms2_power, err_rebinned_power
-## End of function 'geometric_rebinning'
 
 
 ###############################################################################
@@ -639,13 +503,11 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 	
 	
 ###############################################################################
-def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const, 
-	dt_mult, test):
+def main(in_file, out_file, num_seconds, dt_mult, test):
 	""" 
 			main
 	
 	"""	
-	assert rebin_const >= 1.0 , 'ERROR: Re-binning constant must be >= 1.' 
 	
 	t_res = 1.0 / 8192.0  # The time resolution of the data, in seconds
 	dt = dt_mult * t_res
@@ -671,20 +533,13 @@ def main(in_file, out_file, rebinned_out_file, num_seconds, rebin_const,
 	freq, power, leahy_power, rms2_power, rms2_err_power = normalize(power, \
 		n_bins, dt, num_seconds, num_segments, mean_rate_whole, True)
 	
-	rebinned_freq, rebinned_rms2_power, err_rebinned_power = \
-		geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const)
-	
 	## Output, based on file extension
 	if out_file[-4:].lower() == "fits":
-		fits_out(out_file, rebinned_out_file, in_file, dt, n_bins, 
-			nyquist_freq, num_segments, mean_rate_whole, freq, rms2_power, 
-			rms2_err_power, leahy_power, rebin_const, rebinned_freq, 
-			rebinned_rms2_power, err_rebinned_power)
+		fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
+			mean_rate_whole, freq, rms2_power, rms2_err_power, leahy_power)
 	elif out_file[-3:].lower() == "dat":
-		dat_out(out_file, rebinned_out_file, in_file, dt, n_bins, 
-			nyquist_freq, num_segments, mean_rate_whole, freq, rms2_power, 
-			rms2_err_power, leahy_power, rebin_const, rebinned_freq, 
-			rebinned_rms2_power, err_rebinned_power)
+		dat_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
+			mean_rate_whole, freq, rms2_power, rms2_err_power, leahy_power)
 	else:
 		raise Exception("ERROR: Output file must be type .dat or .fits.")
 		
@@ -704,14 +559,9 @@ if __name__ == "__main__":
 		(ASCII/txt) format.')
 	parser.add_argument('outfile', help='The full path of the .fits or .dat \
 		file to write the frequency and power to.')
-	parser.add_argument('rebinned_outfile', help='The full path of the .fits or\
-		.dat file to write the re-binned frequency and power to.')
 	parser.add_argument('-n', '--num_seconds', type=tools.type_power_of_two, \
 		default=1, dest='num_seconds', help='Number of seconds in each Fourier \
 		segment. Must be a power of 2. [1]')
-	parser.add_argument('-c', '--rebin_const', type=tools.type_positive_float,\
-		default=1.01, dest='rebin_const', help='Float constant by which we \
-		re-bin the averaged power spectrum. [1.01]')
 	parser.add_argument('-m', '--dt_mult', type=tools.type_power_of_two, \
 		default=1, dest='dt_mult', help='Multiple of 1/8192 seconds for \
 		timestep between bins. Must be a power of 2. [1]')
@@ -719,7 +569,6 @@ if __name__ == "__main__":
 		present, only does a short test run.')
 	args = parser.parse_args()
 			
-	main(args.infile, args.outfile, args.rebinned_outfile, args.num_seconds,
-		args.rebin_const, args.dt_mult, args.test)
+	main(args.infile, args.outfile, args.num_seconds, args.dt_mult, args.test)
 
 ## End of program 'powerspec.py'
