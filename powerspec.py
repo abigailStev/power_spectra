@@ -48,7 +48,7 @@ def dat_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
 		out.write("\n# Column 1: Frequency [Hz]")
 		out.write("\n# Column 2: Fractional rms^2 normalized mean power")
 		out.write("\n# Column 3: Fractional rms^2 normalized error on the mean \
-			power")
+power")
 		out.write("\n# Column 4: Leahy-normalized mean power")
 		out.write("\n# ")
 		for k in xrange(len(rms2_power)):
@@ -83,7 +83,8 @@ def fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
 	prihdr.set('DT', dt, "seconds")
 	prihdr.set('N_BINS', n_bins, "time bins per segment")
 	prihdr.set('SEGMENTS', num_segments, "segments in the whole light curve")
-	prihdr.set('EXPOSURE', num_segments * n_bins * dt, "seconds, of light curve")
+	prihdr.set('EXPOSURE', num_segments * n_bins * dt, \
+		"seconds, of light curve")
 	prihdr.set('MEANRATE', mean_rate_whole, "counts/second")
 	prihdr.set('NYQUIST', nyquist_freq, "Hz")
 	prihdu = fits.PrimaryHDU(header=prihdr)
@@ -376,7 +377,8 @@ def dat_in(in_file, n_bins, dt, print_iterator, test):
 		raise Exception("ERROR: Start time of data was not read in. Exiting.")
 
 	end_time = start_time + (dt * n_bins)
-	assert end_time > start_time, 'ERROR: End time must come after start time of the segment.'
+	assert end_time > start_time, \
+		'ERROR: End time must come after start time of the segment.'
 # 	print "First start time: %.21f" % start_time
 # 	print "First end   time: %.21f" % end_time
 
@@ -464,7 +466,7 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 	'extracted_in' for easier readability.
 		 
 	"""
-	assert tools.power_of_two(n_bins) , 'ERROR: n_bins must be a power of 2.'
+	assert tools.power_of_two(n_bins) , "ERROR: n_bins must be a power of 2."
 	
 	print "Input file: %s" % in_file
 	
@@ -496,7 +498,8 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 		power_sum, sum_rate_whole, num_segments = extracted_in(in_file, 
 			n_bins, dt, print_iterator, test)
 	else:
-		raise Exception("ERROR: Input file type not recognized. Must be .dat, .fits, or .lc.")
+		raise Exception("ERROR: Input file type not recognized. Must be .dat, \
+.fits, or .lc.")
 	
 	return power_sum, sum_rate_whole, num_segments
 ## End of function 'read_and_use_segments'
@@ -507,18 +510,25 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
 	""" 
 			main
 	
-	"""	
+	Reads in an eventlist, takes FFT of segments of the light curve, computes
+	power of each segment, averages power over all segments of the light curve, 
+	writes resulting normalized power spectrum to a file.
 	
-	t_res = 1.0 / 8192.0  # The time resolution of the data, in seconds
+	"""
+	## Idiot checks, to ensure that our assumptions hold
+    assert num_seconds > 0, "ERROR: num_seconds must be a positive integer."
+    assert dt_mult >= 1, "ERROR: dt_mult must be a positive integer."
+    
+	t_res = float(tools.get_key_val(in_file, 0, 'TIMEDEL'))
+# 	t_res = 1.0 / 8192.0  # The time resolution of the data, in seconds
 	dt = dt_mult * t_res
 	n_bins = num_seconds * int(1.0 / dt)
-	assert tools.power_of_two(n_bins), 'ERROR: n_bins must be a power of 2.'
 	nyquist_freq = 1.0 / (2.0 * dt)
 	df = 1.0 / float(num_seconds)
 
-	print "dt = %.21f seconds" % dt
-	print "n_bins = %d" % n_bins
-	print "Nyquist freq =", nyquist_freq
+# 	print "dt = %.21f seconds" % dt
+# 	print "n_bins = %d" % n_bins
+# 	print "Nyquist freq =", nyquist_freq
 	
 	power_sum, sum_rate_whole, num_segments = read_and_use_segments(in_file, \
 		n_bins, dt, test)
@@ -546,29 +556,35 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
 ## End of function 'main'
 	
 
-
 ################################################################################
 if __name__ == "__main__":
 
-	parser = argparse.ArgumentParser(description='Makes a power spectrum from \
-		an event-mode data file from RXTE.', epilog='For optional arguments,\
-		default values are given in brackets at end of description.')
+	parser = argparse.ArgumentParser(usage='powerspec.py infile outfile [-n \
+NUM_SECONDS] [-m DT_MULT] [--test]', description='Makes a power spectrum from \
+an event-mode data file from RXTE.', epilog='For optional arguments, default \
+values are given in brackets at end of description.')
+		
 	parser.add_argument('infile', help='The full path of the input file with \
-		RXTE event-mode data, with time in column 1 and rate in column 2. FITS \
-		format must have extension .lc or .fits, otherwise assumes .dat \
-		(ASCII/txt) format.')
+RXTE event-mode data, with time in column 1 and rate in column 2. FITS format \
+must have extension .lc or .fits, otherwise assumes .dat (ASCII/txt) format.')
+		
 	parser.add_argument('outfile', help='The full path of the .fits or .dat \
-		file to write the frequency and power to.')
+file to write the frequency and power to.')
+		
 	parser.add_argument('-n', '--num_seconds', type=tools.type_power_of_two, \
-		default=1, dest='num_seconds', help='Number of seconds in each Fourier \
-		segment. Must be a power of 2. [1]')
+default=1, dest='num_seconds', help='Number of seconds in each Fourier segment.\
+ Must be a power of 2, positive, integer. [1]')
+		
 	parser.add_argument('-m', '--dt_mult', type=tools.type_power_of_two, \
-		default=1, dest='dt_mult', help='Multiple of 1/8192 seconds for \
-		timestep between bins. Must be a power of 2. [1]')
+default=1, dest='dt_mult', help='Multiple of dt (dt is from data file) for \
+timestep between bins. Must be a power of 2, positive, integer. [1]')
+		
 	parser.add_argument('--test', action='store_true', dest='test', help='If \
-		present, only does a short test run.')
+present, only does a short test run.')
+
 	args = parser.parse_args()
 			
 	main(args.infile, args.outfile, args.num_seconds, args.dt_mult, args.test)
 
 ## End of program 'powerspec.py'
+###############################################################################
