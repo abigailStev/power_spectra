@@ -515,9 +515,10 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
 	writes resulting normalized power spectrum to a file.
 	
 	"""
-	## Idiot checks, to ensure that our assumptions hold
-    assert num_seconds > 0, "ERROR: num_seconds must be a positive integer."
-    assert dt_mult >= 1, "ERROR: dt_mult must be a positive integer."
+    ## Idiot checks, to ensure that our assumptions hold
+	
+	assert num_seconds > 0, "ERROR: num_seconds must be a positive integer."
+	assert dt_mult >= 1, "ERROR: dt_mult must be a positive integer."
     
 	t_res = float(tools.get_key_val(in_file, 0, 'TIMEDEL'))
 # 	t_res = 1.0 / 8192.0  # The time resolution of the data, in seconds
