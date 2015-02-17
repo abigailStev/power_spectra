@@ -10,8 +10,8 @@ from tools import type_positive_float
 __author__ = "Abigail Stevens"
 __author_email__ = "A.L.Stevens@uva.nl"
 __year__ = "2013-2015"
-__description__ = "Plots a power spectrum that has been re-binned in frequency,\
-in the frequency domain."
+__description__ = "Plots a log power spectrum that has been re-binned in \
+frequency, in the frequency domain."
 
 """
 		plot_rb_powerspec.py
@@ -24,19 +24,20 @@ in the Anaconda package, https://store.continuum.io/cshop/anaconda/
 tools is in the whizzy_scripts git repo.
 
 """
+
 ################################################################################
 def fits_out(out_file, rb_out_file, dt, n_bins, nyquist_freq, num_segments, \
 	mean_rate_whole, rebin_const, rb_freq, rb_rms2, rb_err):
 	"""
 				fits_out
 			
-	Writes power spectrum and re-binned power spectrum to two FITS files.
+	Writes a frequency re-binned power spectrum to a FITS file.
 	
 	"""
 	
 	print "Re-binned output file: %s" % rb_out_file
 
-	## Updating above header for re-binned power spectrum
+	## Updating above header for re-binned power spectrum (extension 0)
 	prihdr = fits.Header()
 	prihdr.set('TYPE', "Re-binned power spectrum")
 	prihdr.set('DATE', str(datetime.now()), "YYYY-MM-DD localtime")
@@ -50,7 +51,7 @@ def fits_out(out_file, rb_out_file, dt, n_bins, nyquist_freq, num_segments, \
 	prihdr.set('NYQUIST', nyquist_freq, "Hz")
 	prihdu = fits.PrimaryHDU(header=prihdr)
 	
-	## Making FITS table for re-binned power spectrum
+	## Making FITS table for re-binned power spectrum (extension 1)
 	col1 = fits.Column(name='FREQUENCY', unit='Hz', format='E', \
 		array=rb_freq)
 	col2 = fits.Column(name='POWER', unit='frac rms^2', format='E', \
@@ -71,31 +72,6 @@ def fits_out(out_file, rb_out_file, dt, n_bins, nyquist_freq, num_segments, \
 	thdulist = fits.HDUList([prihdu, tbhdu])
 	thdulist.writeto(rb_out_file)	
 	
-# 	print "Re-binned output file: %s" % rb_out_file
-# 	with open(rb_out_file, 'w') as out:
-# 		out.write("#\t\tPower spectrum")
-# 		out.write("\n# Data: %s" % in_file)
-# 		out.write("\n# Re-binned in frequency at (%.4f * prev bin size)" \
-# 			% rebin_const)
-# 		out.write("\n# Corresponding un-binned output file: %s" % out_file)
-# 		out.write("\n# Original time bin size = %.21f seconds" % dt)
-# 		out.write("\n# Exposure time = %d seconds" \
-# 			% (num_segments * n_bins * dt))
-# 		out.write("\n# Mean count rate = %.8f" % mean_rate_whole)
-# 		out.write("\n# ")
-# 		out.write("\n# Column 1: Frequency [Hz]")
-# 		out.write("\n# Column 2: Fractional rms^2 normalized mean power")
-# 		out.write("\n# Column 3: Error in fractional rms^2 normalized mean \
-# 			power")
-# 		out.write("\n# ")
-# 		for k in xrange(len(rb_rms2)):
-# 			if rb_freq[k] >= 0:
-# 				out.write("\n{0:.8f}\t{1:.8f}\t{2:.8f}".format(rb_freq[k],
-#                     rb_rms2[k], rb_err[k]))
-# 			## End of if-statement
-# 		## End of for-loop
-# 	## End of with-block
-	
 ## End of function 'fits_out'
 
 
@@ -105,9 +81,10 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 			geometric_rebinning
 			
 	Re-bins the noise-subtracted fractional rms^2 power spectrum in frequency 
-	space by some re-binning constant (rebin_const>1). 
+	space by some re-binning constant (rebin_const > 1). 
 
 	"""
+	
 	## Initializing variables
 	rb_rms2_power = np.asarray([])  # List of re-binned fractional rms power
 	rb_freq = np.asarray([])		  # List of re-binned frequencies
@@ -141,7 +118,8 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 		## Want mean of data points contained within one geometric bin
 		bin_power = np.mean(rms2_power[prev_m:current_m])
 		## Computing error in bin -- equation from Adam Ingram's thesis
-		err_bin_power2 = np.sqrt(np.sum(rms2_err_power[prev_m:current_m] ** 2)) / float(bin_range) 
+		err_bin_power2 = np.sqrt(np.sum(rms2_err_power[prev_m:current_m] ** 2))\
+			/ float(bin_range) 
 		
 		## Computing the mean frequency of a geometric bin
 		bin_freq = np.mean(freq[prev_m:current_m])
@@ -173,50 +151,80 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 ###############################################################################
 if __name__ == "__main__":
 	
-	parser = argparse.ArgumentParser(description="Geometrically re-bins in \
-		frequency and plots a power spectrum.")
+	###########################
+	## Parsing input arguments
+	###########################
+	
+	parser = argparse.ArgumentParser(usage='rebin_powerspec.py tab_file \
+rb_out_file [-o plot_file] [-p prefix] [-c rebin_constant]', description="\
+Geometrically re-bins in frequency and plots a power spectrum.")
+	
 	parser.add_argument('tab_file', help="The table file, in .dat or .fits \
-		format, with frequency in column 1, fractional rms^2 power in column 2,\
-		and error on power in column 3.")
+format, with frequency in column 1, fractional rms^2 power in column 2, and \
+error on power in column 3.")
+	
 	parser.add_argument('rb_out_file', help="The FITS file to write the re-\
-		binned power spectrum to.")
+binned power spectrum to.")
+	
 	parser.add_argument('-o', '--outfile', nargs='?', dest='plot_file', \
-		default="rb_plot.png", help="The output plot file name.")
+default="rb_plot.png", help="The output plot file name.")
+	
 	parser.add_argument('-p', '--prefix', nargs='?', dest='prefix', \
-		default="X", help="The identifying prefix for the file (proposal ID or \
-		object nickname).")
+default="X", help="The identifying prefix for the file (proposal ID or object \
+nickname).")
+	
 	parser.add_argument('-c', '--rebin_const', nargs='?', dest='rebin_const', \
-		type=type_positive_float, default="x", help="The constant by which the \
-		data will be geometrically re-binned.")
+type=type_positive_float, default="x", help="The constant by which the data \
+will be geometrically re-binned.")
+	
 	args = parser.parse_args()
 	
 	assert args.rebin_const >= 1.0 , 'ERROR: Re-binning constant must be >= 1.' 
-
+	
+	##########################################
+	## Reading in power spectrum from a table
+	##########################################
+	
 	if args.tab_file[-4:].lower() == ".dat":
+	
 		table = np.loadtxt(args.tab_file, comments='#')
 		freq = np.asarray(table[:,0])  # frequency, in Hz
 		rms2 = np.asarray(table[:,1])  # fractional rms^2 power
 		error = np.asarray(table[:,2])  # error on power
+		
 	elif args.tab_file[-5:].lower() == ".fits":
+	
 		file_hdu = fits.open(args.tab_file)
 		table = file_hdu[1].data
 		file_hdu.close()
 		freq = table.field('FREQUENCY')  # frequency, in Hz
 		rms2 = table.field('POWER')  # fractional rms^2 power
 		error = table.field('ERROR')  # error on power
+		
 	else:
-		raise Exception('ERROR: File type not recognized. Must have extension .dat or .fits.')
 	
+		raise Exception('ERROR: File type not recognized. Must have extension \
+.dat or .fits.')
 	
+	################################################
 	## Re-binning the power spectrum by rebin_const
-	rb_freq, rb_rms2, rb_err = geometric_rebinning(freq, rms2, error, args.rebin_const)
+	################################################
 	
+	rb_freq, rb_rms2, rb_err = geometric_rebinning(freq, rms2, error, \
+		args.rebin_const)
+	
+	########################################
 	## Want to plot nu * P(nu) in log space 
+	########################################
+	
 	vpv = rb_freq * rb_rms2
 	
+	#############
 	## Plotting!
+	#############
+	
 	font_prop = font_manager.FontProperties(size=16)
-	print "Plotting the re-binned power spectrum: %s" % args.plot_file
+	print "Re-binned power spectrum: %s" % args.plot_file
 
 	fig, ax = plt.subplots(1,1)
 	ax.plot(rb_freq, vpv, lw=2)
@@ -226,13 +234,16 @@ if __name__ == "__main__":
 	ax.set_xlim(freq[0], 600 )
 	ax.set_ylim(0,)
 	ax.set_xlabel(r'$\nu$ [Hz]', fontproperties=font_prop)
-	ax.set_ylabel(r'$\nu$ $\cdot$ P($\nu$) [Hz rms$^2$]', fontproperties=font_prop)
-# 	ax.set_ylabel(r'Power, noise-subtracted fractional rms$^2$', fontproperties=font_prop)
+	ax.set_ylabel(r'$\nu$ $\cdot$ P($\nu$) [Hz rms$^2$]', \
+		fontproperties=font_prop)
+# 	ax.set_ylabel(r'Power, noise-subtracted fractional rms$^2$', \
+# 		fontproperties=font_prop)
 	ax.tick_params(axis='x', labelsize=14)
 	ax.tick_params(axis='y', labelsize=14)
-	ax.set_title("Power spectrum, " + args.prefix + ", Re-bin constant = " + str(args.rebin_const), fontproperties=font_prop)
+	ax.set_title("Power spectrum, " + args.prefix + ", Re-bin constant = " +\
+		str(args.rebin_const), fontproperties=font_prop)
 
-# 	## The following legend code was found on stack overflow I think, or a pyplot tutorial
+	## The following legend code was found on stack overflow I think
 # 	legend = ax.legend(loc='lower right')
 # 	## Set the fontsize
 # 	for label in legend.get_texts():
@@ -240,11 +251,15 @@ if __name__ == "__main__":
 # 	for label in legend.get_lines():
 # 		label.set_linewidth(2)  # the legend line width
 
+	fig.set_tight_layout(True)
 	plt.savefig(args.plot_file, dpi=120)
 # 	plt.show()
 	plt.close()
 	
+	##########################################################
 	## Writing the re-binned power spectrum to an output file 
+	##########################################################
+	
 	file_hdu = fits.open(args.tab_file)
 	dt = file_hdu[0].header['DT']
 	n_bins = file_hdu[0].header['N_BINS']
@@ -257,3 +272,5 @@ if __name__ == "__main__":
 	num_segments, mean_rate_whole, args.rebin_const, rb_freq, rb_rms2, rb_err)
 	
 ## End of program 'rebin_powerspec.py'
+
+################################################################################
