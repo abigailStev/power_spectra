@@ -26,10 +26,10 @@ if __name__ == "__main__":
 	## Parsing input arguments
 	###########################
 	
-	parser = argparse.ArgumentParser(usage='plot_powerspec.py tab_file [-o \
-plot_file] [-p prefix]', description="Plots a power spectrum from a data table.\
-", epilog="For optional arguments, default values are given in brackets at end \
-of description.")
+	parser = argparse.ArgumentParser(usage="python plot_powerspec.py tab_file \
+[-o plot_file] [-p prefix]", description="Plots a power spectrum from a data \
+table.", epilog="For optional arguments, default values are given in brackets \
+at end of description.")
 
 	parser.add_argument('tab_file', help="The table file, in .dat or .fits \
 format, with frequency in column 1, fractional rms^2 power in column 2, and \
@@ -79,8 +79,8 @@ proposal ID). [x]")
 # 	ax.errorbar(freq, rms2, xerr=None, yerr=error)
 	ax.set_xlabel(r'$\nu$ [Hz]', fontproperties=font_prop)
 	ax.set_ylabel(r'Power, noise-subtracted fractional rms$^2$', fontproperties=font_prop)
-# 	ax.set_xlim(0,800)
-# 	ax.set_ylim(0, )
+	ax.set_xlim(560,620)
+	ax.set_ylim(-0.001,0.005)
 	ax.tick_params(axis='x', labelsize=14)
 	ax.tick_params(axis='y', labelsize=14)
 # 	ax.set_title("Power spectrum, " + args.prefix, fontproperties=font_prop)
