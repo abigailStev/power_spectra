@@ -74,7 +74,8 @@ def fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
 	
 	"""
 	print "\nOutput file: %s" % out_file
-
+	detchans=64
+	
 	## Making header for standard power spectrum
 	prihdr = fits.Header()
 	prihdr.set('TYPE', "Power spectrum")
@@ -85,6 +86,7 @@ def fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
 	prihdr.set('SEGMENTS', num_segments, "segments in the whole light curve")
 	prihdr.set('EXPOSURE', num_segments * n_bins * dt, \
 		"seconds, of light curve")
+	prihdr.set('DETCHANS', detchans, "Number of detector energy channels")
 	prihdr.set('MEANRATE', mean_rate_whole, "counts/second")
 	prihdr.set('NYQUIST', nyquist_freq, "Hz")
 	prihdu = fits.PrimaryHDU(header=prihdr)
@@ -113,7 +115,7 @@ def fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
 ## End of function 'fits_out'
 
 
-###############################################################################
+################################################################################
 def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate, noisy):
 	"""
 			normalize
@@ -147,8 +149,9 @@ def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate, noisy):
 	## Fractional rms^2 normalization with noise subtracted off
 	rms2_power = 2.0 * power * dt / float(n_bins) / (mean_rate ** 2)
 	if noisy:
-		noise_level = np.mean(rms2_power[np.where(freq >= 100)])
-		print noise_level
+# 		noise_level = np.mean(rms2_power[np.where(freq >= 100)])
+		noise_level = 2.0 / mean_rate
+		print np.mean(rms2_power[np.where(freq >= 100)])
 		print 2.0 / mean_rate
 		rms2_power -= noise_level
 	
@@ -295,17 +298,26 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 	start_time = data.field('TIME')[0]
 	final_time = data.field('TIME')[-1]
 	end_time = start_time + (dt * n_bins)
-	
-# 	print "First start time: %.21f" % start_time
-# 	print "First end   time: %.21f" % end_time
 
 	## Filter data based on pcu
 # 	PCU2_mask = data.field('PCUID') == 2
 # 	data = data[PCU2_mask]
 
+	## Filter data based on energy channel
+# 	print np.shape(data)
+# 	lower_bound = data.field('CHANNEL') >= 0
+# 	data = data[lower_bound]
+# 	upper_bound = data.field('CHANNEL') <= 27
+# 	data = data[upper_bound]
+# 	print np.shape(data)
+	
 	all_time = np.asarray(data.field('TIME'), dtype=np.float64)
 	all_energy = np.asarray(data.field('CHANNEL'), dtype=np.float64)
+	
+# 	print np.shape(all_energy)
+# 	print len(all_energy)
 
+	## Looping through the segments
 	while end_time <= final_time:
 			
 		time = all_time[np.where(all_time < end_time)]
@@ -351,6 +363,7 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 			end_time += (n_bins * dt)
 
 		elif len(time) == 0:
+			print "No counts in this segment."
 			start_time = all_time[0]
 			end_time = start_time + (n_bins * dt)
 		## End of 'if there are counts in this segment'
