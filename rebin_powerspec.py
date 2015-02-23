@@ -218,6 +218,7 @@ will be geometrically re-binned.")
 	########################################
 	
 	vpv = rb_freq * rb_rms2
+	err_vpv = rb_freq * rb_err
 	
 	#############
 	## Plotting!
@@ -227,11 +228,13 @@ will be geometrically re-binned.")
 	print "Re-binned power spectrum: %s" % args.plot_file
 
 	fig, ax = plt.subplots(1,1)
-	ax.plot(rb_freq, vpv, lw=2)
+# 	ax.plot(rb_freq, vpv, lw=2)
+	ax.errorbar(rb_freq, vpv, yerr=err_vpv, lw=2, c='blue', elinewidth=1, capsize=1)
 	ax.set_xscale('log')
 	ax.set_yscale('log')
 # 	ax.loglog(rb_freq, vpv, lw=2, basex=10)
-	ax.set_xlim(freq[0], 600 )
+# 	ax.set_xlim(freq[0], 3000 )
+# 	ax.set_xlim(100,3000)
 	ax.set_ylim(0,)
 	ax.set_xlabel(r'$\nu$ [Hz]', fontproperties=font_prop)
 	ax.set_ylabel(r'$\nu$ $\cdot$ P($\nu$) [Hz rms$^2$]', \
