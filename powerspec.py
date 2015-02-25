@@ -1,10 +1,11 @@
 import argparse
 import numpy as np
-from scipy import fftpack
+import scipy.fftpack as fftpack
 from astropy.io import fits
 from datetime import datetime
 import os
 import tools  # https://github.com/abigailStev/whizzy_scripts
+import pyfftw
 
 __author__ = "Abigail Stevens"
 __author_email__ = "A.L.Stevens@uva.nl"
@@ -151,7 +152,8 @@ def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate, noisy):
 	if noisy:
 # 		noise_level = np.mean(rms2_power[np.where(freq >= 100)])
 		noise_level = 2.0 / mean_rate
-		print np.mean(rms2_power[np.where(freq >= 100)])
+		if freq[-1] > 100:
+			print np.mean(rms2_power[np.where(freq >= 100)])
 		print 2.0 / mean_rate
 		rms2_power -= noise_level
 	
@@ -178,14 +180,14 @@ def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate, noisy):
 	rms = np.sqrt(signal_variance)  ## should be a few % in frac rms units
 	print "RMS of signal:", rms
 	
-	print "Mean power:", np.mean(rms2_power[np.where(freq >= 100)])
+# 	print "Mean power:", np.mean(rms2_power[np.where(freq >= 100)])
 	
 	return freq, power, leahy_power, rms2_power, rms2_err_power
 ## End of function 'normalize'
 	
 
 ################################################################################
-def make_ps(rate):
+def make_ps(rate, n_bins):
 	"""
 			make_ps
 	
@@ -199,17 +201,53 @@ def make_ps(rate):
 	## Subtracting the mean rate off each value of 'rate'
 	##  This eliminates the spike at 0 Hz 
 	rate_sub_mean = rate - mean_rate
-	
+
 	## Taking the 1-dimensional FFT of the time-domain photon count rate
-	##  Using the SciPy FFT algorithm, as it's faster than NumPy for large lists
-	fft_data = fftpack.fft(rate_sub_mean)
-	
+	## Using the SciPy FFT algorithm, as it's faster than NumPy for large lists
+	fft_scipy_data = fftpack.fft(rate_sub_mean)
+		
 	## Computing the power
 	power_segment = np.absolute(fft_data) ** 2
 	
 	return power_segment, mean_rate
 ## End of function 'make_ps'
 
+
+################################################################################
+def make_ps_alltogether(rate, n_bins, num_segments):
+	"""
+			make_ps_alltogether
+	
+	Takes the power spectrum of a big array. For if all the columns are light 
+	curve segment count rates.
+	
+	"""
+	
+# 	print np.shape(rate)
+	rate = rate[:,1:]
+# 	print np.shape(rate)
+	mean_rate = np.mean(rate, axis=0)
+# 	print "Mean rate Shape", np.shape(mean_rate)
+	rate_sub_mean = np.subtract(rate, mean_rate)
+# 	print "Rate sub mean Shape", np.shape(rate_sub_mean)
+	
+	## Taking the FFT of the time-domain photon count rate
+	## SciPy FFT is faster than NumPy or pyFFTW for the sizes I deal with
+	## See whizzy_scripts/FFT_comparison.ipynb!
+	fft_data = fftpack.fft(rate_sub_mean, axis=0)
+	
+	## Computing the power
+	power_segments = np.absolute(fft_data) ** 2
+# 	print "Power segment Shape:", np.shape(power_segments)
+	
+	power = np.average(power_segments, axis=1)
+	mean_rate_whole = np.average(mean_rate)
+# 	print mean_rate_whole
+# 	print "Averaged power Shape:", np.shape(power)
+	
+	return power, mean_rate_whole
+## End of function 'make_ps_alltogether'
+	
 
 ################################################################################
 def extracted_in(in_file, n_bins, dt, print_iterator, test):
@@ -247,7 +285,7 @@ def extracted_in(in_file, n_bins, dt, print_iterator, test):
 		## Extracts the second column of 'data' and assigns it to 'rate'. 
 		rate = data[i:j].field(1)
 		
-		power_segment, mean_rate_segment = make_ps(rate)
+		power_segment, mean_rate_segment = make_ps(rate, n_bins)
 		power_sum += power_segment
 		sum_rate_whole += mean_rate_segment
 		
@@ -286,12 +324,13 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 			 
 	"""	
 	fits_hdu = fits.open(in_file)
-	header = fits_hdu[0].header	 # Header info is in ext 0, data is in ext 1
-	data = fits_hdu[1].data
+	header = fits_hdu[0].header	 ## Header is in ext 0
+	data = fits_hdu[1].data  ## Data is in ext 1
 	fits_hdu.close()
 	
 	sum_rate_whole = 0
 	power_sum = np.zeros(n_bins, dtype=np.float64)
+	rate = np.zeros(n_bins, dtype=np.float64)
 	num_segments = 0
 	lightcurve = np.asarray([])
 
@@ -337,10 +376,10 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 			rate_2d, rate_1d = tools.make_lightcurve(time, 
 				energy, n_bins, dt, start_time)
 			lightcurve = np.concatenate((lightcurve, rate_1d))
-						
-			power_segment, mean_rate_segment = make_ps(rate_1d)
+# 			rate = np.column_stack((rate, rate_1d))
+			
+			power_segment, mean_rate_segment = make_ps(rate_1d, n_bins)
 			assert int(len(power_segment)) == n_bins
-
 			power_sum += power_segment
 			sum_rate_whole += mean_rate_segment
 			
@@ -357,7 +396,7 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 			rate_1d = None
 			
 			if test and (num_segments == 1):  # Testing
-				np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
+				np.savetxt('tmp_lightcurve.dat', lightcurve, fmt='%d')
 				break
 			start_time += (n_bins * dt)
 			end_time += (n_bins * dt)
@@ -369,8 +408,9 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 		## End of 'if there are counts in this segment'
 
 	## End of while-loop
-
+	
 	return power_sum, sum_rate_whole, num_segments
+# 	return rate, num_segments
 ## End of function 'fits_in'
 
 
@@ -416,6 +456,7 @@ def dat_in(in_file, n_bins, dt, print_iterator, test):
 		for line, next_line in tools.pairwise(f):
 			if line[0].strip() != "#" and \
 				float(line.strip().split()[0]) >= start_time:  
+				
 				## If the line is not a comment
 				line = line.strip().split()
 				next_line = next_line.strip().split()
@@ -438,7 +479,7 @@ def dat_in(in_file, n_bins, dt, print_iterator, test):
 							n_bins, dt, start_time)
 						lightcurve = np.concatenate((lightcurve, rate_1d))
 					
-						power_segment, mean_rate_segment = make_ps(rate_1d)
+						power_segment, mean_rate_segment = make_ps(rate_1d, n_bins)
 						assert int(len(power_segment)) == n_bins
 
 						power_sum += power_segment
@@ -513,6 +554,8 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 	if (in_file[-5:].lower() == ".fits"):
 		power_sum, sum_rate_whole, num_segments = fits_in(in_file, 
 			n_bins, dt, print_iterator, test)
+# 		rate, num_segments = fits_in(in_file, 
+# 			n_bins, dt, print_iterator, test)
 	elif (in_file[-4:].lower() == ".dat"):
 		power_sum, sum_rate_whole, num_segments = dat_in(in_file, 
 			n_bins, dt, print_iterator, test)
@@ -524,6 +567,7 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 .fits, or .lc.")
 	
 	return power_sum, sum_rate_whole, num_segments
+# 	return rate, num_segments
 ## End of function 'read_and_use_segments'
 	
 	
@@ -555,7 +599,7 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
 	nyquist_freq = 1.0 / (2.0 * dt)
 	df = 1.0 / float(num_seconds)
 
-	print "DT = %f seconds" % dt
+	print "\nDT = %f seconds" % dt
 	print "N_bins = %d" % n_bins
 	print "Nyquist freq =", nyquist_freq
 	
@@ -565,7 +609,10 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
 	
 	power_sum, sum_rate_whole, num_segments = read_and_use_segments(in_file, \
 		n_bins, dt, test)
-	print "\n"
+# 	rate, num_segments = read_and_use_segments(in_file, n_bins, dt, test)
+	
+# 	power, mean_rate_whole = make_ps_alltogether(rate, n_bins, num_segments)
+	print " "
 	
 	print "\tTotal number of segments =", num_segments
 	
@@ -609,8 +656,8 @@ if __name__ == "__main__":
 	##############################################
 	
 	parser = argparse.ArgumentParser(usage='powerspec.py infile outfile [-n \
-NUM_SECONDS] [-m DT_MULT] [--test]', description='Makes a power spectrum from \
-an event-mode data file from RXTE.', epilog='For optional arguments, default \
+NUM_SECONDS] [-m DT_MULT] [-t {0,1}]', description='Makes a power spectrum from\
+ an event-mode data file from RXTE.', epilog='For optional arguments, default \
 values are given in brackets at end of description.')
 		
 	parser.add_argument('infile', help='The full path of the input file with \
@@ -628,12 +675,21 @@ default=1, dest='num_seconds', help='Number of seconds in each Fourier segment.\
 default=1, dest='dt_mult', help='Multiple of dt (dt is from data file) for \
 timestep between bins. Must be a power of 2, positive, integer. [1]')
 		
-	parser.add_argument('--test', action='store_true', dest='test', help='If \
-present, only does a short test run.')
+# 	parser.add_argument('--test', action='store_true', dest='test', help='If \
+# present, only does a short test run.')
+
+	parser.add_argument('-t', '--test', type=int, default=0, choices={0,1}, \
+dest='test', help='Int flag: 0 if computing all segments, 1 if only computing \
+one segment for testing. [0]')
 
 	args = parser.parse_args()
-			
-	main(args.infile, args.outfile, args.num_seconds, args.dt_mult, args.test)
+	
+	test = False
+	if args.test == 1:
+		test = True
+		
+	main(args.infile, args.outfile, args.num_seconds, args.dt_mult, test)
+	
 
 ## End of program 'powerspec.py'
 ###############################################################################
