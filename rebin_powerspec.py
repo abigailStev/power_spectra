@@ -3,6 +3,8 @@ import numpy as np
 from astropy.io import fits
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as font_manager
+from matplotlib.ticker import ScalarFormatter
+import matplotlib.ticker as ticker
 from datetime import datetime
 import os
 from tools import type_positive_float
@@ -104,9 +106,10 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 	## geometric bin, to compute the average power and frequency of that
 	## geometric bin.
 	## Equations for frequency, power, and error on power are from Adam Ingram's
-	## PhD thesis
+	## PhD thesis.
 	while current_m < len(rms2_power):
 # 	while current_m < 100: # used for debugging
+
 		## Initializing clean variables for each iteration of the while-loop
 		bin_power = 0.0  # the averaged power at each index of rb_rms2_power
 		err_bin_power2 = 0.0  # the square of the errors on powers in this bin
@@ -148,7 +151,57 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 ## End of function 'geometric_rebinning'
 
 
-###############################################################################
+################################################################################
+def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
+	"""
+			plot_rb
+	
+	Plots the re-binned power spectrum.
+	
+	"""
+	print "Re-binned power spectrum: %s" % plot_file
+
+	font_prop = font_manager.FontProperties(size=18)
+	xFormatter = ScalarFormatter() ## changing format type for tick labels so
+								   ## I can use ticklabel_format below.
+	
+	fig, ax = plt.subplots(1,1)
+# 	ax.plot(rb_freq, vpv, lw=2)
+	ax.errorbar(rb_freq, vpv, yerr=err_vpv, lw=2, c='blue', elinewidth=1, \
+		capsize=1)
+	ax.set_xscale('log')
+	ax.set_yscale('log')
+	ax.set_xlim(0.01, 100)
+# 	ax.set_xlabel(r'$\nu$ [Hz]', fontproperties=font_prop)
+# 	ax.set_ylabel(r'$\nu$ $\cdot$ P($\nu$) [Hz rms$^2$]', \
+# 		fontproperties=font_prop)
+	ax.set_xlabel('Frequency (Hz)', fontproperties=font_prop)
+	ax.set_ylabel(r'Power$\times$ frequency (frac. rms$^{2}\times$ Hz)', \
+		fontproperties=font_prop)
+	ax.tick_params(axis='x', labelsize=16, bottom=True, top=True, \
+		labelbottom=True, labeltop=False)
+	ax.tick_params(axis='y', labelsize=16, left=True, right=True, \
+		labelleft=True, labelright=False)
+# 	ax.xaxis.set_major_formatter(xFormatter)
+# 	ax.ticklabel_format(axis='x', style='plain')
+	ax.set_title(prefix + ", Re-bin constant = " +\
+		str(rebin_const), fontproperties=font_prop)
+
+	## The following legend code was found on stack overflow I think
+# 	legend = ax.legend(loc='lower right')
+# 	## Set the fontsize
+# 	for label in legend.get_texts():
+# 		label.set_fontsize('small')
+# 	for label in legend.get_lines():
+# 		label.set_linewidth(2)  # the legend line width
+
+	fig.set_tight_layout(True)
+	plt.savefig(plot_file, dpi=200)
+# 	plt.show()
+	plt.close()
+
+
+################################################################################
 if __name__ == "__main__":
 	
 	###########################
@@ -157,7 +210,9 @@ if __name__ == "__main__":
 	
 	parser = argparse.ArgumentParser(usage='rebin_powerspec.py tab_file \
 rb_out_file [-o plot_file] [-p prefix] [-c rebin_constant]', description="\
-Geometrically re-bins in frequency and plots a power spectrum.")
+Geometrically re-bins in frequency and plots a power spectrum.", epilog="For \
+optional arguments, default values are given in brackets at end of \
+description.")
 	
 	parser.add_argument('tab_file', help="The table file, in .dat or .fits \
 format, with frequency in column 1, fractional rms^2 power in column 2, and \
@@ -166,16 +221,16 @@ error on power in column 3.")
 	parser.add_argument('rb_out_file', help="The FITS file to write the re-\
 binned power spectrum to.")
 	
-	parser.add_argument('-o', '--outfile', nargs='?', dest='plot_file', \
-default="rb_plot.png", help="The output plot file name.")
+	parser.add_argument('-o', '--outfile', required=False, dest='plot_file', \
+default="./psd_rb.png", help="The output plot file name. [./psd_rb.png]")
 	
-	parser.add_argument('-p', '--prefix', nargs='?', dest='prefix', \
-default="X", help="The identifying prefix for the file (proposal ID or object \
-nickname).")
+	parser.add_argument('-p', '--prefix', required=False, dest='prefix', \
+default="--", help="The identifying prefix for the file (proposal ID or object \
+nickname). [--]")
 	
-	parser.add_argument('-c', '--rebin_const', nargs='?', dest='rebin_const', \
-type=type_positive_float, default="x", help="The constant by which the data \
-will be geometrically re-binned.")
+	parser.add_argument('-c', '--rebin_const', required=False, \
+dest='rebin_const', type=type_positive_float, default=1.01, help="The constant \
+by which the data will be geometrically re-binned. [1.01]")
 	
 	args = parser.parse_args()
 	
@@ -224,40 +279,8 @@ will be geometrically re-binned.")
 	## Plotting!
 	#############
 	
-	font_prop = font_manager.FontProperties(size=16)
-	print "Re-binned power spectrum: %s" % args.plot_file
-
-	fig, ax = plt.subplots(1,1)
-# 	ax.plot(rb_freq, vpv, lw=2)
-	ax.errorbar(rb_freq, vpv, yerr=err_vpv, lw=2, c='blue', elinewidth=1, capsize=1)
-	ax.set_xscale('log')
-	ax.set_yscale('log')
-# 	ax.loglog(rb_freq, vpv, lw=2, basex=10)
-# 	ax.set_xlim(freq[0], 3000 )
-# 	ax.set_xlim(100,3000)
-	ax.set_ylim(0,)
-	ax.set_xlabel(r'$\nu$ [Hz]', fontproperties=font_prop)
-	ax.set_ylabel(r'$\nu$ $\cdot$ P($\nu$) [Hz rms$^2$]', \
-		fontproperties=font_prop)
-# 	ax.set_ylabel(r'Power, noise-subtracted fractional rms$^2$', \
-# 		fontproperties=font_prop)
-	ax.tick_params(axis='x', labelsize=14)
-	ax.tick_params(axis='y', labelsize=14)
-	ax.set_title("Power spectrum, " + args.prefix + ", Re-bin constant = " +\
-		str(args.rebin_const), fontproperties=font_prop)
-
-	## The following legend code was found on stack overflow I think
-# 	legend = ax.legend(loc='lower right')
-# 	## Set the fontsize
-# 	for label in legend.get_texts():
-# 		label.set_fontsize('small')
-# 	for label in legend.get_lines():
-# 		label.set_linewidth(2)  # the legend line width
-
-	fig.set_tight_layout(True)
-	plt.savefig(args.plot_file, dpi=120)
-# 	plt.show()
-	plt.close()
+	plot_rb(args.plot_file, args.rebin_const, args.prefix, rb_freq, vpv, \
+		err_vpv)
 	
 	##########################################################
 	## Writing the re-binned power spectrum to an output file 
