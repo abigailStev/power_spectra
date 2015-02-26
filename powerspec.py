@@ -152,7 +152,7 @@ def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate, noisy):
 	if noisy:
 # 		noise_level = np.mean(rms2_power[np.where(freq >= 100)])
 		noise_level = 2.0 / mean_rate
-		if freq[-1] > 100:
+		if np.max(freq) > 100:
 			print np.mean(rms2_power[np.where(freq >= 100)])
 		print 2.0 / mean_rate
 		rms2_power -= noise_level
@@ -240,8 +240,8 @@ def make_ps_alltogether(rate, n_bins, num_segments):
 	power_segments = np.absolute(fft_data) ** 2
 # 	print "Power segment Shape:", np.shape(power_segments)
 	
-	power = np.average(power_segments, axis=1)
-	mean_rate_whole = np.average(mean_rate)
+	power = np.mean(power_segments, axis=1)
+	mean_rate_whole = np.mean(mean_rate)
 # 	print mean_rate_whole
 # 	print "Averaged power Shape:", np.shape(power)
 	
