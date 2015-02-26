@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
 import matplotlib.font_manager as font_manager
+from matplotlib.ticker import MultipleLocator
 
 __author__ = "Abigail Stevens"
 __author_email__ = "A.L.Stevens@uva.nl"
@@ -40,8 +41,8 @@ default="./psd.png", help="The output file name for the power spectrum plot. \
 [./psd.png]")
 
 	parser.add_argument('-p', '--prefix', nargs='?', dest='prefix', \
-default="x", help="The identifying prefix of the data (object nickname or \
-proposal ID). [x]")
+default="--", help="The identifying prefix of the data (object nickname or \
+proposal ID). [--]")
 		
 	args = parser.parse_args()
 	
@@ -64,7 +65,8 @@ proposal ID). [x]")
 		rms2 = table.field('POWER')  # fractional rms^2 power
 		error = table.field('ERROR')  # error on power
 	else:
-		raise Exception('ERROR: File type not recognized. Must have extension .dat or .fits.')
+		raise Exception('ERROR: File type not recognized. Must have extension \
+.dat or .fits.')
 		
 	vpv = freq * rms2
 	
@@ -72,21 +74,29 @@ proposal ID). [x]")
 	## Plotting the power spectrum (psd)
 	#####################################
 	
-	font_prop = font_manager.FontProperties(size=16)
+	font_prop = font_manager.FontProperties(size=18)
+	xLocator = MultipleLocator(1)  ## location of minor ticks on the x-axis
+	yLocator = MultipleLocator(0.0002)  ## location of minor ticks on the y-axis
 	
 	fig, ax = plt.subplots(1,1)
 	ax.plot(freq, rms2, linewidth=2)
 # 	ax.errorbar(freq, rms2, xerr=None, yerr=error)
-	ax.set_xlabel(r'$\nu$ [Hz]', fontproperties=font_prop)
-	ax.set_ylabel(r'Power, noise-subtracted fractional rms$^2$', fontproperties=font_prop)
-	ax.set_xlim(560,620)
-	ax.set_ylim(-0.001,0.005)
-	ax.tick_params(axis='x', labelsize=14)
-	ax.tick_params(axis='y', labelsize=14)
-# 	ax.set_title("Power spectrum, " + args.prefix, fontproperties=font_prop)
+# 	ax.set_xlim(0,np.max(freq))
+	ax.set_xlim(1, 800)
+# 	ax.set_ylim(-0.001, 0.005)
+	ax.xaxis.set_minor_locator(xLocator)
+	ax.yaxis.set_minor_locator(yLocator)
+	ax.set_xlabel('Frequency (Hz)', fontproperties=font_prop)
+	ax.set_ylabel(r'Power (frac. rms$^{2}$)', \
+		fontproperties=font_prop)
+	ax.tick_params(axis='x', labelsize=16, bottom=True, top=True, \
+		labelbottom=True, labeltop=False)
+	ax.tick_params(axis='y', labelsize=16, left=True, right=True, \
+		labelleft=True, labelright=False)
+	ax.set_title(args.prefix, fontproperties=font_prop)
 	
 	fig.set_tight_layout(True)
-	plt.savefig(args.plot_file, dpi=120)
+	plt.savefig(args.plot_file, dpi=200)
 # 	plt.show()
 	plt.close()
 	
