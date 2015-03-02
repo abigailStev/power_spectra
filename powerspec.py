@@ -5,7 +5,6 @@ from astropy.io import fits
 from datetime import datetime
 import os
 import tools  # https://github.com/abigailStev/whizzy_scripts
-import pyfftw
 
 __author__ = "Abigail Stevens"
 __author_email__ = "A.L.Stevens@uva.nl"
@@ -204,7 +203,7 @@ def make_ps(rate, n_bins):
 
 	## Taking the 1-dimensional FFT of the time-domain photon count rate
 	## Using the SciPy FFT algorithm, as it's faster than NumPy for large lists
-	fft_scipy_data = fftpack.fft(rate_sub_mean)
+	fft_data = fftpack.fft(rate_sub_mean)
 		
 	## Computing the power
 	power_segment = np.absolute(fft_data) ** 2
@@ -330,7 +329,6 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 	
 	sum_rate_whole = 0
 	power_sum = np.zeros(n_bins, dtype=np.float64)
-	rate = np.zeros(n_bins, dtype=np.float64)
 	num_segments = 0
 	lightcurve = np.asarray([])
 
@@ -351,32 +349,25 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 # 	print np.shape(data)
 	
 	all_time = np.asarray(data.field('TIME'), dtype=np.float64)
-	all_energy = np.asarray(data.field('CHANNEL'), dtype=np.float64)
+# 	all_energy = np.asarray(data.field('CHANNEL'), dtype=np.float64)
 	
-# 	print np.shape(all_energy)
-# 	print len(all_energy)
-
+	################################
 	## Looping through the segments
+	################################
+	
 	while end_time <= final_time:
 			
 		time = all_time[np.where(all_time < end_time)]
-		energy = all_energy[np.where(all_time < end_time)]
+# 		energy = all_energy[np.where(all_time < end_time)]
 		
 		for_next_iteration = np.where(all_time >= end_time)
 		all_time = all_time[for_next_iteration]
-		all_energy = all_energy[for_next_iteration]
-
-# 		print "Len of time:", len(all_time)
-# 		print "\nLen time:", len(time)
-# 		print "Start: %.21f" % start_time
-# 		print "End  : %.21f" % end_time
+# 		all_energy = all_energy[for_next_iteration]
 
 		if len(time) > 0:
 			num_segments += 1
-			rate_2d, rate_1d = tools.make_lightcurve(time, 
-				energy, n_bins, dt, start_time)
+			rate_1d = tools.make_1Dlightcurve(time, n_bins, dt, start_time)
 			lightcurve = np.concatenate((lightcurve, rate_1d))
-# 			rate = np.column_stack((rate, rate_1d))
 			
 			power_segment, mean_rate_segment = make_ps(rate_1d, n_bins)
 			assert int(len(power_segment)) == n_bins
@@ -389,10 +380,9 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 
 			## Clearing variables from memory
 			time = None
-			energy = None
+# 			energy = None
 			power_segment = None
 			mean_rate_segment = None
-			rate_2d = None
 			rate_1d = None
 			
 			if test and (num_segments == 1):  # Testing
@@ -410,7 +400,6 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 	## End of while-loop
 	
 	return power_sum, sum_rate_whole, num_segments
-# 	return rate, num_segments
 ## End of function 'fits_in'
 
 
@@ -554,8 +543,6 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 	if (in_file[-5:].lower() == ".fits"):
 		power_sum, sum_rate_whole, num_segments = fits_in(in_file, 
 			n_bins, dt, print_iterator, test)
-# 		rate, num_segments = fits_in(in_file, 
-# 			n_bins, dt, print_iterator, test)
 	elif (in_file[-4:].lower() == ".dat"):
 		power_sum, sum_rate_whole, num_segments = dat_in(in_file, 
 			n_bins, dt, print_iterator, test)
@@ -567,7 +554,6 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 .fits, or .lc.")
 	
 	return power_sum, sum_rate_whole, num_segments
-# 	return rate, num_segments
 ## End of function 'read_and_use_segments'
 	
 	
@@ -609,9 +595,7 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
 	
 	power_sum, sum_rate_whole, num_segments = read_and_use_segments(in_file, \
 		n_bins, dt, test)
-# 	rate, num_segments = read_and_use_segments(in_file, n_bins, dt, test)
 	
-# 	power, mean_rate_whole = make_ps_alltogether(rate, n_bins, num_segments)
 	print " "
 	
 	print "\tTotal number of segments =", num_segments
@@ -630,7 +614,9 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
 	################################
 	
 	freq, power, leahy_power, rms2_power, rms2_err_power = normalize(power, \
-		n_bins, dt, num_seconds, num_segments, mean_rate_whole, True)
+		n_bins, dt, num_seconds, num_segments, mean_rate_whole, True)  
+		## True = noisy light curve (a.k.a. using real data, or simulated light
+		## curve is given a non-zero noise level)
 	
 	###################################
 	## Output, based on file extension
@@ -689,7 +675,6 @@ one segment for testing. [0]')
 		test = True
 		
 	main(args.infile, args.outfile, args.num_seconds, args.dt_mult, test)
-	
 
 ## End of program 'powerspec.py'
-###############################################################################
+################################################################################
