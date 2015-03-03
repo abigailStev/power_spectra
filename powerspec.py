@@ -210,42 +210,6 @@ def make_ps(rate, n_bins):
 	
 	return power_segment, mean_rate
 ## End of function 'make_ps'
-
-
-################################################################################
-def make_ps_alltogether(rate, n_bins, num_segments):
-	"""
-			make_ps_alltogether
-	
-	Takes the power spectrum of a big array. For if all the columns are light 
-	curve segment count rates.
-	
-	"""
-	
-# 	print np.shape(rate)
-	rate = rate[:,1:]
-# 	print np.shape(rate)
-	mean_rate = np.mean(rate, axis=0)
-# 	print "Mean rate Shape", np.shape(mean_rate)
-	rate_sub_mean = np.subtract(rate, mean_rate)
-# 	print "Rate sub mean Shape", np.shape(rate_sub_mean)
-	
-	## Taking the FFT of the time-domain photon count rate
-	## SciPy FFT is faster than NumPy or pyFFTW for the sizes I deal with
-	## See whizzy_scripts/FFT_comparison.ipynb!
-	fft_data = fftpack.fft(rate_sub_mean, axis=0)
-	
-	## Computing the power
-	power_segments = np.absolute(fft_data) ** 2
-# 	print "Power segment Shape:", np.shape(power_segments)
-	
-	power = np.mean(power_segments, axis=1)
-	mean_rate_whole = np.mean(mean_rate)
-# 	print mean_rate_whole
-# 	print "Averaged power Shape:", np.shape(power)
-	
-	return power, mean_rate_whole
-## End of function 'make_ps_alltogether'
 	
 
 ################################################################################
