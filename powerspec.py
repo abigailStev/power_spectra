@@ -7,7 +7,7 @@ import os
 import tools  # https://github.com/abigailStev/whizzy_scripts
 
 __author__ = "Abigail Stevens"
-__author_email__ = "A.L.Stevens@uva.nl"
+__author_email__ = "A.L.Stevens at uva.nl"
 __year__ = "2013-2015"
 __description__ = "Makes a power spectrum averaged over segments from an RXTE \
 event-mode data file."
@@ -225,7 +225,6 @@ def extracted_in(in_file, n_bins, dt, print_iterator, test):
 	
 	## Open the fits file and load the data
 	fits_hdu = fits.open(in_file)
-	header = fits_hdu[1].header	
 	data = fits_hdu[1].data
 	fits_hdu.close()
 	
@@ -235,7 +234,9 @@ def extracted_in(in_file, n_bins, dt, print_iterator, test):
 	num_segments = 0
 	i = 0  # start of bin index to make segment of data for inner for-loop
 	j = n_bins  # end of bin index to make segment of data for inner for-loop
-
+	
+	print data[1].field(0) - data[0].field(0)
+	
 	assert dt == (data[1].field(0) - data[0].field(0)), \
 		'ERROR: dt must be the same resolution as the extracted FITS data.'
 	

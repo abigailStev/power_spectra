@@ -10,7 +10,7 @@ import os
 from tools import type_positive_float
 
 __author__ = "Abigail Stevens"
-__author_email__ = "A.L.Stevens@uva.nl"
+__author_email__ = "A.L.Stevens at uva.nl"
 __year__ = "2013-2015"
 __description__ = "Plots a log power spectrum that has been re-binned in \
 frequency, in the frequency domain."
@@ -78,6 +78,30 @@ def fits_out(out_file, rb_out_file, dt, n_bins, nyquist_freq, num_segments, \
 
 
 ################################################################################
+def dat_out(rb_out, freq_min, freq_max, rb_freq, rb_rms2, rb_err):
+	"""
+			dat_out
+	
+	Makes the correct output table for FLX2XSP.
+	
+	"""
+	dir = os.path.dirname(rb_out)
+	base = os.path.basename(rb_out)[:-5]
+	out_file = dir+"/"+base+"_flx2xsp.txt"
+	print "Table for FLX2XSP:", out_file
+	
+	with open(out_file, 'w') as out:
+		for i in range(len(rb_freq)):
+			delta_nu = freq_max[i] - freq_min[i]
+			pow = rb_rms2[i] * rb_freq[i] * delta_nu
+			err = rb_err[i] * rb_freq[i] * delta_nu		
+			out.write("%f \t%f \t%.6e \t%.6e\n" % (freq_min[i], freq_max[i], \
+				pow, err))
+		
+## End of function 'dat_out'
+
+
+################################################################################
 def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 	"""
 			geometric_rebinning
@@ -102,6 +126,8 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 	bin_range = 0.0			  # The range of un-binned bins covered by this 
 							  #  re-binned bin
 	
+	freq_min = np.asarray([])
+	freq_max = np.asarray([])
 	## Looping through the length of the array power, geometric bin by 
 	## geometric bin, to compute the average power and frequency of that
 	## geometric bin.
@@ -126,11 +152,13 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 		
 		## Computing the mean frequency of a geometric bin
 		bin_freq = np.mean(freq[prev_m:current_m])
-
+		
 		## Appending values to arrays
 		rb_rms2_power = np.append(rb_rms2_power, bin_power)
 		rb_freq = np.append(rb_freq, bin_freq)
 		rb_err = np.append(rb_err, err_bin_power2)
+		freq_min = np.append(freq_min, freq[prev_m])
+		freq_max = np.append(freq_max, freq[current_m])
 		
 		## Incrementing for the next iteration of the loop
 		## Since the for-loop goes from prev_m to current_m-1 (since that's how
@@ -147,7 +175,7 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 		err_bin_power2 = None	
 	## End of while-loop
 	
-	return rb_freq, rb_rms2_power, rb_err
+	return rb_freq, rb_rms2_power, rb_err, freq_min, freq_max
 ## End of function 'geometric_rebinning'
 
 
@@ -167,7 +195,7 @@ def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
 	
 	fig, ax = plt.subplots(1,1)
 # 	ax.plot(rb_freq, vpv, lw=2)
-	ax.errorbar(rb_freq, vpv, yerr=err_vpv, lw=2, c='blue', elinewidth=1, \
+	ax.errorbar(rb_freq, vpv, yerr=err_vpv, lw=2, c='orange', elinewidth=1, \
 		capsize=1)
 	ax.set_xscale('log')
 	ax.set_yscale('log')
@@ -184,8 +212,10 @@ def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
 		labelleft=True, labelright=False)
 # 	ax.xaxis.set_major_formatter(xFormatter)
 # 	ax.ticklabel_format(axis='x', style='plain')
-	ax.set_title(prefix + ", Re-bin constant = " +\
-		str(rebin_const), fontproperties=font_prop)
+
+# 	ax.set_title(prefix + ", Re-bin const = " +\
+# 		str(rebin_const), fontproperties=font_prop)
+	ax.set_title(prefix, fontproperties=font_prop)
 
 	## The following legend code was found on stack overflow I think
 # 	legend = ax.legend(loc='lower right')
@@ -196,7 +226,8 @@ def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
 # 		label.set_linewidth(2)  # the legend line width
 
 	fig.set_tight_layout(True)
-	plt.savefig(plot_file, dpi=200)
+# 	plt.savefig(plot_file, dpi=200)
+	plt.savefig(plot_file)
 # 	plt.show()
 	plt.close()
 
@@ -265,8 +296,8 @@ by which the data will be geometrically re-binned. [1.01]")
 	## Re-binning the power spectrum by rebin_const
 	################################################
 	
-	rb_freq, rb_rms2, rb_err = geometric_rebinning(freq, rms2, error, \
-		args.rebin_const)
+	rb_freq, rb_rms2, rb_err, freq_min, freq_max = geometric_rebinning(freq, \
+		rms2, error, args.rebin_const)
 	
 	########################################
 	## Want to plot nu * P(nu) in log space 
@@ -294,8 +325,11 @@ by which the data will be geometrically re-binned. [1.01]")
 	mean_rate_whole = file_hdu[0].header['MEANRATE']
 	file_hdu.close()
 		
-	fits_out(args.tab_file, args.rb_out_file, dt, n_bins, nyquist_freq, 
-	num_segments, mean_rate_whole, args.rebin_const, rb_freq, rb_rms2, rb_err)
+	fits_out(args.tab_file, args.rb_out_file, dt, n_bins, nyquist_freq, \
+		num_segments, mean_rate_whole, args.rebin_const, rb_freq, rb_rms2, \
+		rb_err)
+		
+	dat_out(args.rb_out_file, freq_min, freq_max, rb_freq, rb_rms2, rb_err)
 	
 ## End of program 'rebin_powerspec.py'
 
