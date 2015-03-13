@@ -6,7 +6,7 @@ import matplotlib.font_manager as font_manager
 from matplotlib.ticker import MultipleLocator
 
 __author__ = "Abigail Stevens"
-__author_email__ = "A.L.Stevens@uva.nl"
+__author_email__ = "A.L.Stevens at uva.nl"
 __year__ = "2013-2015"
 __description__ = "Plots a linear power spectrum in the frequency domain."
 
@@ -14,9 +14,6 @@ __description__ = "Plots a linear power spectrum in the frequency domain."
 		plot_powerspec.py
 
 Written in Python 2.7.
-
-All modules imported above, as well as python 2.7, can be downloaded in the 
-Anaconda package, https://store.continuum.io/cshop/anaconda/
 
 """
 
@@ -68,24 +65,22 @@ proposal ID). [--]")
 		raise Exception('ERROR: File type not recognized. Must have extension \
 .dat or .fits.')
 		
-	vpv = freq * rms2
-	
 	#####################################
 	## Plotting the power spectrum (psd)
 	#####################################
 	
 	font_prop = font_manager.FontProperties(size=18)
-	xLocator = MultipleLocator(1)  ## location of minor ticks on the x-axis
-	yLocator = MultipleLocator(0.0002)  ## location of minor ticks on the y-axis
+# 	xLocator = MultipleLocator(1)  ## location of minor ticks on the x-axis
+# 	yLocator = MultipleLocator(0.0002)  ## location of minor ticks on the y-axis
 	
 	fig, ax = plt.subplots(1,1)
 	ax.plot(freq, rms2, linewidth=2)
 # 	ax.errorbar(freq, rms2, xerr=None, yerr=error)
-# 	ax.set_xlim(0,np.max(freq))
-	ax.set_xlim(1, 800)
+	ax.set_xlim(0,np.max(freq))
+# 	ax.set_xlim(1, 800)
 # 	ax.set_ylim(-0.001, 0.005)
-	ax.xaxis.set_minor_locator(xLocator)
-	ax.yaxis.set_minor_locator(yLocator)
+# 	ax.xaxis.set_minor_locator(xLocator)
+# 	ax.yaxis.set_minor_locator(yLocator)
 	ax.set_xlabel('Frequency (Hz)', fontproperties=font_prop)
 	ax.set_ylabel(r'Power (frac. rms$^{2}$)', \
 		fontproperties=font_prop)
@@ -96,7 +91,7 @@ proposal ID). [--]")
 	ax.set_title(args.prefix, fontproperties=font_prop)
 	
 	fig.set_tight_layout(True)
-	plt.savefig(args.plot_file, dpi=200)
+	plt.savefig(args.plot_file, dpi=150)
 # 	plt.show()
 	plt.close()
 	
