@@ -8,7 +8,7 @@ from matplotlib.ticker import MultipleLocator
 __author__ = "Abigail Stevens"
 __author_email__ = "A.L.Stevens at uva.nl"
 __year__ = "2013-2015"
-__description__ = "Plots a linear power spectrum in the frequency domain."
+__description__ = "Linearly plots a power spectrum in the frequency domain."
 
 """
 		plot_powerspec.py
@@ -16,6 +16,78 @@ __description__ = "Plots a linear power spectrum in the frequency domain."
 Written in Python 2.7.
 
 """
+################################################################################
+def main(tab_file, plot_file, prefix):
+	"""
+			main
+	
+	Linearly plots a power spectrum in the frequency domain.
+	
+	"""
+	##########################################
+	## Reading in power spectrum from a table
+	##########################################
+		
+	if args.tab_file[-4:].lower() == ".dat":
+		table = np.loadtxt(tab_file, comments='#')
+		freq = np.asarray(table[:,0])  # frequency, in Hz
+		rms2 = np.asarray(table[:,1])  # fractional rms^2 power
+		error = np.asarray(table[:,2])  # error on power
+	elif args.tab_file[-5:].lower() == ".fits":
+		file_hdu = fits.open(tab_file)
+		table = file_hdu[1].data
+		file_hdu.close()
+		freq = table.field('FREQUENCY')  # frequency, in Hz
+		rms2 = table.field('POWER')  # fractional rms^2 power
+		error = table.field('ERROR')  # error on power
+	else:
+		raise Exception('ERROR: File type not recognized. Must have extension \
+.dat or .fits.')
+	
+	
+	#####################################
+	## Plotting the power spectrum (psd)
+	#####################################
+	
+
+	
+	font_prop = font_manager.FontProperties(size=18)
+	
+	
+	print "Power spectrum: %s" % plot_file
+
+	fig, ax = plt.subplots(1,1)
+	ax.plot(freq, rms2, linewidth=2)
+# 	ax.errorbar(freq, rms2, xerr=None, yerr=error)
+
+	ax.set_xlim(np.min(freq),np.max(freq))
+	ax.set_ylim(0,)
+
+	## Setting the axes' minor ticks. It's complicated.
+	x_maj_loc = ax.get_xticks()
+	y_maj_loc = ax.get_yticks()
+	x_min_mult = 0.2 * (x_maj_loc[1] - x_maj_loc[0])
+	y_min_mult = 0.2 * (y_maj_loc[1] - y_maj_loc[0])
+	xLocator = MultipleLocator(x_min_mult)  ## location of minor ticks on the x-axis
+	yLocator = MultipleLocator(y_min_mult)  ## location of minor ticks on the y-axis
+	ax.xaxis.set_minor_locator(xLocator)
+	ax.yaxis.set_minor_locator(yLocator)
+	
+	ax.set_xlabel('Frequency (Hz)', fontproperties=font_prop)
+	ax.set_ylabel(r'Power (frac. rms$^{2}$)', \
+		fontproperties=font_prop)
+	ax.tick_params(axis='x', labelsize=16, bottom=True, top=True, \
+		labelbottom=True, labeltop=False)
+	ax.tick_params(axis='y', labelsize=16, left=True, right=True, \
+		labelleft=True, labelright=False)
+	ax.set_title(prefix, fontproperties=font_prop)
+	
+	fig.set_tight_layout(True)
+	plt.savefig(plot_file, dpi=100)  ## set dpi higher for better image resolution
+# 	plt.show()
+	plt.close()
+## End of function 'main'
+	
 
 ################################################################################
 if __name__ == "__main__":
@@ -43,58 +115,7 @@ proposal ID). [--]")
 		
 	args = parser.parse_args()
 	
-	##########################################
-	## Reading in power spectrum from a table
-	##########################################
+	main(args.tab_file, args.plot_file, args.prefix)
 	
-	print "Power spectrum: %s" % args.plot_file
-	
-	if args.tab_file[-4:].lower() == ".dat":
-		table = np.loadtxt(args.tab_file, comments='#')
-		freq = np.asarray(table[:,0])  # frequency, in Hz
-		rms2 = np.asarray(table[:,1])  # fractional rms^2 power
-		error = np.asarray(table[:,2])  # error on power
-	elif args.tab_file[-5:].lower() == ".fits":
-		file_hdu = fits.open(args.tab_file)
-		table = file_hdu[1].data
-		file_hdu.close()
-		freq = table.field('FREQUENCY')  # frequency, in Hz
-		rms2 = table.field('POWER')  # fractional rms^2 power
-		error = table.field('ERROR')  # error on power
-	else:
-		raise Exception('ERROR: File type not recognized. Must have extension \
-.dat or .fits.')
-		
-	#####################################
-	## Plotting the power spectrum (psd)
-	#####################################
-	
-	font_prop = font_manager.FontProperties(size=18)
-# 	xLocator = MultipleLocator(1)  ## location of minor ticks on the x-axis
-# 	yLocator = MultipleLocator(0.0002)  ## location of minor ticks on the y-axis
-	
-	fig, ax = plt.subplots(1,1)
-	ax.plot(freq, rms2, linewidth=2)
-# 	ax.errorbar(freq, rms2, xerr=None, yerr=error)
-	ax.set_xlim(0,np.max(freq))
-# 	ax.set_xlim(1, 800)
-# 	ax.set_ylim(-0.001, 0.005)
-# 	ax.xaxis.set_minor_locator(xLocator)
-# 	ax.yaxis.set_minor_locator(yLocator)
-	ax.set_xlabel('Frequency (Hz)', fontproperties=font_prop)
-	ax.set_ylabel(r'Power (frac. rms$^{2}$)', \
-		fontproperties=font_prop)
-	ax.tick_params(axis='x', labelsize=16, bottom=True, top=True, \
-		labelbottom=True, labeltop=False)
-	ax.tick_params(axis='y', labelsize=16, left=True, right=True, \
-		labelleft=True, labelright=False)
-	ax.set_title(args.prefix, fontproperties=font_prop)
-	
-	fig.set_tight_layout(True)
-	plt.savefig(args.plot_file, dpi=150)
-# 	plt.show()
-	plt.close()
-	
-## End of program 'plot_powerspec.py'
 
 ################################################################################
