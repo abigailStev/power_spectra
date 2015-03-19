@@ -102,18 +102,18 @@ def dat_out(rb_out, freq_min, freq_max, rb_freq, rb_rms2, rb_err):
 
 
 ################################################################################
-def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
+def geometric_rebinning(freq, power, err_power, rebin_const):
 	"""
 			geometric_rebinning
 			
-	Re-bins the noise-subtracted fractional rms^2 power spectrum in frequency 
-	space by some re-binning constant (rebin_const > 1). 
+	Re-bins the power spectrum in frequency space by some re-binning constant 
+	(rebin_const > 1).
 
 	"""
 	
 	## Initializing variables
-	rb_rms2_power = np.asarray([])  # List of re-binned fractional rms power
-	rb_freq = np.asarray([])		  # List of re-binned frequencies
+	rb_power = np.asarray([]) # List of re-binned power
+	rb_freq = np.asarray([])  # List of re-binned frequencies
 	rb_err = np.asarray([])	  # List of error in re-binned power
 	real_index = 1.0		  # The unrounded next index in power
 	int_index = 1			  # The int of real_index, added to current_m every 
@@ -125,19 +125,18 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 	err_bin_power2 = 0.0	  # The error squared on 'bin_power'
 	bin_range = 0.0			  # The range of un-binned bins covered by this 
 							  #  re-binned bin
-	
 	freq_min = np.asarray([])
 	freq_max = np.asarray([])
+	
 	## Looping through the length of the array power, geometric bin by 
 	## geometric bin, to compute the average power and frequency of that
 	## geometric bin.
-	## Equations for frequency, power, and error on power are from Adam Ingram's
-	## PhD thesis.
-	while current_m < len(rms2_power):
+	## Equations for frequency, power, and error are from A. Ingram's PhD thesis
+	while current_m < len(power):
 # 	while current_m < 100: # used for debugging
 
 		## Initializing clean variables for each iteration of the while-loop
-		bin_power = 0.0  # the averaged power at each index of rb_rms2_power
+		bin_power = 0.0  # the averaged power at each index of rb_power
 		err_bin_power2 = 0.0  # the square of the errors on powers in this bin
 		bin_range = 0.0
 		bin_freq = 0.0
@@ -145,16 +144,16 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 		## Determining the range of indices this specific geometric bin covers
 		bin_range = np.absolute(current_m - prev_m)
 		## Want mean of data points contained within one geometric bin
-		bin_power = np.mean(rms2_power[prev_m:current_m])
+		bin_power = np.mean(power[prev_m:current_m])
 		## Computing error in bin -- equation from Adam Ingram's thesis
-		err_bin_power2 = np.sqrt(np.sum(rms2_err_power[prev_m:current_m] ** 2))\
+		err_bin_power2 = np.sqrt(np.sum(err_power[prev_m:current_m] ** 2))\
 			/ float(bin_range) 
 		
 		## Computing the mean frequency of a geometric bin
 		bin_freq = np.mean(freq[prev_m:current_m])
 		
 		## Appending values to arrays
-		rb_rms2_power = np.append(rb_rms2_power, bin_power)
+		rb_power = np.append(rb_power, bin_power)
 		rb_freq = np.append(rb_freq, bin_freq)
 		rb_err = np.append(rb_err, err_bin_power2)
 		freq_min = np.append(freq_min, freq[prev_m])
@@ -175,7 +174,7 @@ def geometric_rebinning(freq, rms2_power, rms2_err_power, rebin_const):
 		err_bin_power2 = None	
 	## End of while-loop
 	
-	return rb_freq, rb_rms2_power, rb_err, freq_min, freq_max
+	return rb_freq, rb_power, rb_err, freq_min, freq_max
 ## End of function 'geometric_rebinning'
 
 
@@ -194,12 +193,13 @@ def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
 								   ## I can use ticklabel_format below.
 	
 	fig, ax = plt.subplots(1,1)
-# 	ax.plot(rb_freq, vpv, lw=2)
-	ax.errorbar(rb_freq, vpv, yerr=err_vpv, lw=2, c='orange', elinewidth=1, \
-		capsize=1)
+	ax.plot(rb_freq, vpv, lw=2)
+# 	ax.errorbar(rb_freq, vpv, yerr=err_vpv, lw=2, c='orange', elinewidth=1, \
+# 		capsize=1)
 	ax.set_xscale('log')
 	ax.set_yscale('log')
 	ax.set_xlim(0.01, 100)
+# 	ax.set_ylim(1e-5, 1e-1)
 # 	ax.set_xlabel(r'$\nu$ [Hz]', fontproperties=font_prop)
 # 	ax.set_ylabel(r'$\nu$ $\cdot$ P($\nu$) [Hz rms$^2$]', \
 # 		fontproperties=font_prop)
