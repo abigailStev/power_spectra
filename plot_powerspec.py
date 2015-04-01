@@ -31,14 +31,14 @@ def main(tab_file, plot_file, prefix):
 	if args.tab_file[-4:].lower() == ".dat":
 		table = np.loadtxt(tab_file, comments='#')
 		freq = np.asarray(table[:,0])  # frequency, in Hz
-		rms2 = np.asarray(table[:,1])  # fractional rms^2 power
+		fracrms = np.asarray(table[:,1])  # fractional rms^2 power
 		error = np.asarray(table[:,2])  # error on power
 	elif args.tab_file[-5:].lower() == ".fits":
 		file_hdu = fits.open(tab_file)
 		table = file_hdu[1].data
 		file_hdu.close()
 		freq = table.field('FREQUENCY')  # frequency, in Hz
-		rms2 = table.field('POWER')  # fractional rms^2 power
+		fracrms = table.field('POWER')  # fractional rms^2 power
 		error = table.field('ERROR')  # error on power
 	else:
 		raise Exception('ERROR: File type not recognized. Must have extension \
@@ -49,20 +49,16 @@ def main(tab_file, plot_file, prefix):
 	## Plotting the power spectrum (psd)
 	#####################################
 	
-
-	
 	font_prop = font_manager.FontProperties(size=18)
-	
 	
 	print "Power spectrum: %s" % plot_file
 
 	fig, ax = plt.subplots(1,1)
-	ax.plot(freq, rms2, linewidth=2)
-# 	ax.errorbar(freq, rms2, xerr=None, yerr=error)
+	ax.plot(freq, fracrms, linewidth=2)
+# 	ax.errorbar(freq, fracrms, xerr=None, yerr=error)
 
-	ax.set_xlim(np.min(freq),np.max(freq))
-	ax.set_ylim(0,)
-
+	ax.set_xlim(freq[1],np.max(freq))
+	ax.set_ylim(0, 0.012)
 	## Setting the axes' minor ticks. It's complicated.
 	x_maj_loc = ax.get_xticks()
 	y_maj_loc = ax.get_yticks()
@@ -72,7 +68,8 @@ def main(tab_file, plot_file, prefix):
 	yLocator = MultipleLocator(y_min_mult)  ## location of minor ticks on the y-axis
 	ax.xaxis.set_minor_locator(xLocator)
 	ax.yaxis.set_minor_locator(yLocator)
-	
+
+# 	ax.set_xscale('log')
 	ax.set_xlabel('Frequency (Hz)', fontproperties=font_prop)
 	ax.set_ylabel(r'Power (frac. rms$^{2}$)', \
 		fontproperties=font_prop)
