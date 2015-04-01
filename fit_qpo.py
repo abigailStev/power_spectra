@@ -1,7 +1,7 @@
 #!//anaconda/bin/python
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import leastsq # Levenberg-Marquadt Algorithm #
+from scipy.optimize import leastsq ## Levenberg-Marquadt Algorithm
 from astropy.io import fits
 from os import system
 import argparse
@@ -213,8 +213,10 @@ def main(in_file, qpo_mod):
 	
 	print "\tQ value:", Q
 	print "\tQPO scale:", best_fit[2]
-	print "\tPL exp:", best_fit[3]
-	print "\tPL scale:", best_fit[4], "\n"
+	print "\tPL index:", best_fit[3]
+	print "\tPL scale:", best_fit[4]
+	scale_ratio = float(best_fit[4]) / float(best_fit[2])
+	print "QPO to PL scale ratio: 1.0:%.3e\n" % scale_ratio
 
 	## Fit power law to data
 	best_pl = powerlaw(freq, best_fit)
