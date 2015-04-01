@@ -23,8 +23,8 @@ in the Anaconda package, https://store.continuum.io/cshop/anaconda/
 """
 
 ################################################################################
-def dat_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
-	mean_rate_whole, freq, rms2_power, rms2_err_power, leahy_power):
+def dat_out(out_file, in_file, dt, n_bins, nyquist_freq, num_seg, \
+	mean_rate_whole, freq, fracrms_power, fracrms_err, leahy_power):
 	""" 
 			dat_out
 			
@@ -39,9 +39,9 @@ def dat_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
 		out.write("\n# Data: %s" % in_file)
 		out.write("\n# Time bin size = %.21f seconds" % dt)
 		out.write("\n# Number of bins per segment = %d" % n_bins)
-		out.write("\n# Number of segments per light curve = %d" % num_segments)
+		out.write("\n# Number of segments per light curve = %d" % num_seg)
 		out.write("\n# Exposure time = %d seconds" \
-			% (num_segments * n_bins * dt))
+			% (num_seg * n_bins * dt))
 		out.write("\n# Mean count rate = %.8f" % mean_rate_whole)
 		out.write("\n# Nyquist frequency = %.4f" % nyquist_freq)
 		out.write("\n# ")
@@ -51,12 +51,12 @@ def dat_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
 power")
 		out.write("\n# Column 4: Leahy-normalized mean power")
 		out.write("\n# ")
-		for k in xrange(len(rms2_power)):
+		for k in xrange(len(fracrms_power)):
 			if freq[k] >= 0:
-# 				out.write("\n%.8f\t%.8f\t%.8f" % (freq[k], rms2_power[k], 
-# 					rms2_err_power[k]))
+# 				out.write("\n%.8f\t%.8f\t%.8f" % (freq[k], fracrms_power[k], 
+# 					fracrms_err[k]))
 				out.write("\n{0:.8f}\t{1:.8f}\t{2:.8f}\t{3:.8f}".format(freq[k], 
-					rms2_power[k], rms2_err_power[k], leahy_power[k]))
+					fracrms_power[k], fracrms_err[k], leahy_power[k]))
 			## End of if-statement
 		## End of for-loop
 	## End of with-block
@@ -65,8 +65,8 @@ power")
 
 
 ################################################################################
-def fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
-	mean_rate_whole, freq, rms2_power, rms2_err_power, leahy_power):
+def fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_seg, \
+	mean_rate_whole, freq, fracrms_power, fracrms_err, leahy_power):
 	"""
 				fits_out
 			
@@ -83,8 +83,8 @@ def fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
 	prihdr.set('EVTLIST', in_file)
 	prihdr.set('DT', dt, "seconds")
 	prihdr.set('N_BINS', n_bins, "time bins per segment")
-	prihdr.set('SEGMENTS', num_segments, "segments in the whole light curve")
-	prihdr.set('EXPOSURE', num_segments * n_bins * dt, \
+	prihdr.set('SEGMENTS', num_seg, "segments in the whole light curve")
+	prihdr.set('EXPOSURE', num_seg * n_bins * dt, \
 		"seconds, of light curve")
 	prihdr.set('DETCHANS', detchans, "Number of detector energy channels")
 	prihdr.set('MEANRATE', mean_rate_whole, "counts/second")
@@ -94,9 +94,9 @@ def fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
 	## Making FITS table for standard power spectrum
 	col1 = fits.Column(name='FREQUENCY', unit='Hz', format='E', array=freq)
 	col2 = fits.Column(name='POWER', unit='frac rms^2', format='E', \
-		array=rms2_power)
+		array=fracrms_power)
 	col3 = fits.Column(name='ERROR', unit='frac rms^2', format='E', \
-		array=rms2_err_power)
+		array=fracrms_err)
 	col4 = fits.Column(name='LEAHY', format='E', array=leahy_power)
 	cols = fits.ColDefs([col1, col2, col3, col4])
 	tbhdu = fits.BinTableHDU.from_columns(cols)
@@ -116,7 +116,7 @@ def fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
 
 
 ################################################################################
-def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate, noisy):
+def normalize(power, n_bins, dt, num_seconds, num_seg, mean_rate, noisy):
 	"""
 			normalize
 	
@@ -140,29 +140,37 @@ def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate, noisy):
 	power = power[0:max_index + 1]
 	
 	## Computing the error on the mean power
-	err_power = power / np.sqrt(float(num_segments) * float(n_bins))
+	err_power = power / np.sqrt(float(num_seg) * float(n_bins))
+	
+	## Absolute rms^2 normalization
+	absrms_power = 2.0 * power * dt / float(n_bins)
+	absrms_err = 2.0 * err_power * dt / float(n_bins)
 	
 	## Leahy normalization
-	leahy_power = 2.0 * power * dt / float(n_bins) / mean_rate
+	leahy_power = absrms_power / mean_rate
+	leahy_err = absrms_err / mean_rate
 	print "Mean value of Leahy power =", np.mean(leahy_power)  ## ~2
 
-	## Fractional rms^2 normalization with noise subtracted off
-	rms2_power = 2.0 * power * dt / float(n_bins) / (mean_rate ** 2)
+	## Fractional rms^2 normalization
+	fracrms_power = absrms_power / (mean_rate ** 2)
+	fracrms_err = absrms_err / (mean_rate ** 2)
+	
+	## Compute the Poisson noise level and subtract it off the power
 	if noisy:
-# 		noise_level = np.mean(rms2_power[np.where(freq >= 100)])
-		noise_level = 2.0 / mean_rate
+		fracrms_noise = 2.0 / mean_rate
+		absrms_noise = 2.0 * mean_rate
+		leahy_noise = 2.0
+
 		if np.max(freq) > 100:
-			print np.mean(rms2_power[np.where(freq >= 100)])
-		print 2.0 / mean_rate
-		rms2_power -= noise_level
-	
-	## Error on fractional rms^2 power (not subtracting noise)
-	rms2_err_power = 2.0 * err_power * dt / float(n_bins) / mean_rate ** 2
-	
+			print "Mean above 100Hz:", np.mean(absrms_power[np.where(freq >= 100)])
+			print "Absrms noise:", absrms_noise
+		fracrms_power -= fracrms_noise
+		absrms_power -= absrms_noise
+		
 	df = 1.0 / float(num_seconds)  ## in Hz
 	
-	## Find the signal frequency -- assumes that the signal dominates the 
-	## power spectrum.
+	## Find the pulsation signal frequency -- assumes that the signal dominates
+	## the power spectrum.
 	signal_freq = freq[np.argmax(power*freq)]
 	print "Frequency of maximum power:", signal_freq
 	
@@ -172,16 +180,23 @@ def normalize(power, n_bins, dt, num_seconds, num_segments, mean_rate, noisy):
 	j_min = list(min_freq_mask).index(False)
 	j_max = list(max_freq_mask).index(True)
 	## Extracting only the signal frequencies of the power
-	signal_pow = np.float64(rms2_power[j_min:j_max])
+	signal_pow = np.float64(fracrms_power[j_min:j_max])
+	
 	## Computing variance and rms of the signal
 	signal_variance = np.sum(signal_pow * df)
-	print "Signal variance:", signal_variance
-	rms = np.sqrt(signal_variance)  ## should be a few % in frac rms units
-	print "RMS of signal:", rms
+	print "Signal variance:", signal_variance, "(frac rms2)"
+	rms_signal = np.sqrt(signal_variance)  ## should be a few % in frac rms units
+	print "Signal RMS:", rms_signal, "(frac rms2)"
 	
-# 	print "Mean power:", np.mean(rms2_power[np.where(freq >= 100)])
+	## Variance and rms of the whole averaged power spectrum
+	total_variance = np.sum(fracrms_power * df)
+	print "Total variance:", total_variance, "(frac rms2)"
+	rms_total = np.sqrt(total_variance)
+	print "Total RMS:", rms_total, "(frac rms2)"
 	
-	return freq, power, leahy_power, rms2_power, rms2_err_power
+# 	print "Mean power:", np.mean(fracrms_power[np.where(freq >= 100)])
+	
+	return freq, power, leahy_power, fracrms_power, fracrms_err
 ## End of function 'normalize'
 	
 
@@ -224,14 +239,19 @@ def extracted_in(in_file, n_bins, dt, print_iterator, test):
 	"""	
 	
 	## Open the fits file and load the data
-	fits_hdu = fits.open(in_file)
+	try:
+		fits_hdu = fits.open(in_file)
+	except IOError:
+		print "\tERROR: File does not exist: %s" % in_file
+		exit()
+		
 	data = fits_hdu[1].data
 	fits_hdu.close()
 	
 	## Initializations
 	sum_rate_whole = 0
 	power_sum = np.zeros(n_bins, dtype=np.float64)
-	num_segments = 0
+	num_seg = 0
 	i = 0  # start of bin index to make segment of data for inner for-loop
 	j = n_bins  # end of bin index to make segment of data for inner for-loop
 	
@@ -244,7 +264,7 @@ def extracted_in(in_file, n_bins, dt, print_iterator, test):
 	while j <= len(data.field(1)):  ## while we haven't reached the end of the 
 									## file
 	
-		num_segments += 1
+		num_seg += 1
 
 		## Extracts the second column of 'data' and assigns it to 'rate'. 
 		rate = data[i:j].field(1)
@@ -253,10 +273,10 @@ def extracted_in(in_file, n_bins, dt, print_iterator, test):
 		power_sum += power_segment
 		sum_rate_whole += mean_rate_segment
 		
-		if num_segments % print_iterator == 0:
-			print "\t", num_segments
+		if num_seg % print_iterator == 0:
+			print "\t", num_seg
 			
-		if (test == True) and (num_segments == 1):  # For testing
+		if (test == True) and (num_seg == 1):  # For testing
 			break
 		
 		## Clear loop variables for the next round
@@ -273,7 +293,7 @@ def extracted_in(in_file, n_bins, dt, print_iterator, test):
 		
 	## End of while-loop
 		
-	return power_sum, sum_rate_whole, num_segments
+	return power_sum, sum_rate_whole, num_seg
 ## End of function 'extracted_in'
 
 
@@ -287,14 +307,20 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 	power spectra over all segments.
 			 
 	"""	
-	fits_hdu = fits.open(in_file)
+	
+	try:
+		fits_hdu = fits.open(in_file)
+	except IOError:
+		print "\tERROR: File does not exist: %s" % in_file
+		exit()
+		
 	header = fits_hdu[0].header	 ## Header is in ext 0
 	data = fits_hdu[1].data  ## Data is in ext 1
 	fits_hdu.close()
 	
 	sum_rate_whole = 0
 	power_sum = np.zeros(n_bins, dtype=np.float64)
-	num_segments = 0
+	num_seg = 0
 	lightcurve = np.asarray([])
 
 	start_time = data.field('TIME')[0]
@@ -330,7 +356,7 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 # 		all_energy = all_energy[for_next_iteration]
 
 		if len(time) > 0:
-			num_segments += 1
+			num_seg += 1
 			rate_1d = tools.make_1Dlightcurve(time, n_bins, dt, start_time)
 			lightcurve = np.concatenate((lightcurve, rate_1d))
 			
@@ -340,8 +366,8 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 			sum_rate_whole += mean_rate_segment
 			
 			## Printing out which segment we're on every x segments
-			if num_segments % print_iterator == 0:
-				print "\t", num_segments
+			if num_seg % print_iterator == 0:
+				print "\t", num_seg
 
 			## Clearing variables from memory
 			time = None
@@ -350,7 +376,7 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 			mean_rate_segment = None
 			rate_1d = None
 			
-			if test and (num_segments == 1):  # Testing
+			if test and (num_seg == 1):  # Testing
 				np.savetxt('tmp_lightcurve.dat', lightcurve, fmt='%d')
 				break
 			start_time += (n_bins * dt)
@@ -364,7 +390,7 @@ def fits_in(in_file, n_bins, dt, print_iterator, test):
 
 	## End of while-loop
 	
-	return power_sum, sum_rate_whole, num_segments
+	return power_sum, sum_rate_whole, num_seg
 ## End of function 'fits_in'
 
 
@@ -387,7 +413,7 @@ def dat_in(in_file, n_bins, dt, print_iterator, test):
 	energy = np.asarray([])
 	sum_rate_whole = 0
 	power_sum = np.zeros(n_bins, dtype=np.float64)
-	num_segments = 0
+	num_seg = 0
 	lightcurve = np.asarray([])
 	
 	## Reading only the first line of data to get the start time of the file
@@ -428,7 +454,7 @@ def dat_in(in_file, n_bins, dt, print_iterator, test):
 				if next_time >= end_time:  ## Triggered at the end of a segment
 
 					if len(time) > 0:
-						num_segments += 1
+						num_seg += 1
 						rate_2d, rate_1d = tools.make_lightcurve(time, energy, 
 							n_bins, dt, start_time)
 						lightcurve = np.concatenate((lightcurve, rate_1d))
@@ -439,8 +465,8 @@ def dat_in(in_file, n_bins, dt, print_iterator, test):
 						power_sum += power_segment
 						sum_rate_whole += mean_rate_segment
 						## Printing out which segment we're on every x segments
-						if num_segments % print_iterator == 0:
-							print "\t", num_segments
+						if num_seg % print_iterator == 0:
+							print "\t", num_seg
 
 						## Clearing variables from memory
 						power_segment = None
@@ -450,7 +476,7 @@ def dat_in(in_file, n_bins, dt, print_iterator, test):
 						time = np.asarray([])
 						energy = np.asarray([])
 					
-						if test and (num_segments == 1):  ## Testing
+						if test and (num_seg == 1):  ## Testing
 							np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
 							break
 
@@ -468,7 +494,7 @@ def dat_in(in_file, n_bins, dt, print_iterator, test):
 		## End of for-loop 
 	## End of with-block
 
-	return power_sum, sum_rate_whole, num_segments
+	return power_sum, sum_rate_whole, num_seg
 ## End of function 'dat_in'
 	
 
@@ -506,19 +532,19 @@ def read_and_use_segments(in_file, n_bins, dt, test):
 	## power spectrum can be taken, whereas data from lc was made in seextrct 
 	## and so it's already populated as a light curve
 	if (in_file[-5:].lower() == ".fits"):
-		power_sum, sum_rate_whole, num_segments = fits_in(in_file, 
+		power_sum, sum_rate_whole, num_seg = fits_in(in_file, 
 			n_bins, dt, print_iterator, test)
 	elif (in_file[-4:].lower() == ".dat"):
-		power_sum, sum_rate_whole, num_segments = dat_in(in_file, 
+		power_sum, sum_rate_whole, num_seg = dat_in(in_file, 
 			n_bins, dt, print_iterator, test)
 	elif (in_file[-3:].lower() == ".lc"):
-		power_sum, sum_rate_whole, num_segments = extracted_in(in_file, 
+		power_sum, sum_rate_whole, num_seg = extracted_in(in_file, 
 			n_bins, dt, print_iterator, test)
 	else:
 		raise Exception("ERROR: Input file type not recognized. Must be .dat, \
 .fits, or .lc.")
 	
-	return power_sum, sum_rate_whole, num_segments
+	return power_sum, sum_rate_whole, num_seg
 ## End of function 'read_and_use_segments'
 	
 	
@@ -558,28 +584,28 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
 	## Read in segments of a light curve or event list and make a power spectrum
 	############################################################################
 	
-	power_sum, sum_rate_whole, num_segments = read_and_use_segments(in_file, \
+	power_sum, sum_rate_whole, num_seg = read_and_use_segments(in_file, \
 		n_bins, dt, test)
 	
 	print " "
 	
-	print "\tTotal number of segments =", num_segments
+	print "\tTotal number of segments =", num_seg
 	
 	#########################################################################
 	## Dividing sums by the number of segments to get an arithmetic average.
 	#########################################################################
 	
-	power = power_sum / float(num_segments)
+	power = power_sum / float(num_seg)
 	assert int(len(power)) == n_bins, 'ERROR: Power should have length n_bins.'
-	mean_rate_whole = sum_rate_whole / float(num_segments)
+	mean_rate_whole = sum_rate_whole / float(num_seg)
 	print "Mean count rate over whole lightcurve =", mean_rate_whole
 	
 	################################
 	## Normalize the power spectrum
 	################################
 	
-	freq, power, leahy_power, rms2_power, rms2_err_power = normalize(power, \
-		n_bins, dt, num_seconds, num_segments, mean_rate_whole, True)  
+	freq, power, leahy_power, fracrms_power, fracrms_err = normalize(power, \
+		n_bins, dt, num_seconds, num_seg, mean_rate_whole, True)  
 		## True = noisy light curve (a.k.a. using real data, or simulated light
 		## curve is given a non-zero noise level)
 	
@@ -588,11 +614,11 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
 	###################################
 	
 	if out_file[-4:].lower() == "fits":
-		fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
-			mean_rate_whole, freq, rms2_power, rms2_err_power, leahy_power)
+		fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_seg, \
+			mean_rate_whole, freq, fracrms_power, fracrms_err, leahy_power)
 	elif out_file[-3:].lower() == "dat":
-		dat_out(out_file, in_file, dt, n_bins, nyquist_freq, num_segments, \
-			mean_rate_whole, freq, rms2_power, rms2_err_power, leahy_power)
+		dat_out(out_file, in_file, dt, n_bins, nyquist_freq, num_seg, \
+			mean_rate_whole, freq, fracrms_power, fracrms_err, leahy_power)
 	else:
 		raise Exception("ERROR: Output file must be type .dat or .fits.")
 		
