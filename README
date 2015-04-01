@@ -13,10 +13,11 @@ writes to a file.
 
 rebin_powerspec.py:
 Re-bins the power spectrum by frequency by a specified re-binning constant. 
-Saves the re-binned power spectrum to a file, plots it, and saves the plot.
+Saves the re-binned power spectrum to a file, plots it logarithmically, and 
+saves the plot.
 
 plot_powerspec.py:
-Plots a power spectrum and saves the plot.
+Linearly plots a power spectrum and saves the plot.
 
 Note that 'tools.py' is in my git repo 'whizzy_scripts'.
 
