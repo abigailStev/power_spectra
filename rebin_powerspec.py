@@ -189,8 +189,6 @@ def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
 	print "Re-binned power spectrum: %s" % plot_file
 
 	font_prop = font_manager.FontProperties(size=18)
-	xFormatter = ScalarFormatter() ## changing format type for tick labels so
-								   ## I can use ticklabel_format below.
 	
 	fig, ax = plt.subplots(1,1)
 	ax.plot(rb_freq, vpv, lw=2)
@@ -198,8 +196,8 @@ def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
 # 		capsize=1)
 	ax.set_xscale('log')
 	ax.set_yscale('log')
-	ax.set_xlim(0.01, 100)
-# 	ax.set_ylim(1e-5, 1e-1)
+	ax.set_xlim(rb_freq[1],np.max(rb_freq))
+	ax.set_ylim(1e-5, 1e-1)
 # 	ax.set_xlabel(r'$\nu$ [Hz]', fontproperties=font_prop)
 # 	ax.set_ylabel(r'$\nu$ $\cdot$ P($\nu$) [Hz rms$^2$]', \
 # 		fontproperties=font_prop)
@@ -210,11 +208,6 @@ def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
 		labelbottom=True, labeltop=False)
 	ax.tick_params(axis='y', labelsize=16, left=True, right=True, \
 		labelleft=True, labelright=False)
-# 	ax.xaxis.set_major_formatter(xFormatter)
-# 	ax.ticklabel_format(axis='x', style='plain')
-
-# 	ax.set_title(prefix + ", Re-bin const = " +\
-# 		str(rebin_const), fontproperties=font_prop)
 	ax.set_title(prefix, fontproperties=font_prop)
 
 	## The following legend code was found on stack overflow I think
