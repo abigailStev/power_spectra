@@ -3,7 +3,8 @@ import numpy as np
 import scipy.fftpack as fftpack
 from astropy.io import fits
 from datetime import datetime
-import os
+import os.path
+import subprocess
 import tools  # https://github.com/abigailStev/whizzy_scripts
 
 __author__ = "Abigail Stevens"
@@ -105,8 +106,7 @@ def fits_out(out_file, in_file, dt, n_bins, nyquist_freq, num_seg, \
 	assert out_file[-4:].lower() == "fits", \
 		'ERROR: Standard output file must have extension ".fits".'
 	if os.path.isfile(out_file):
-# 		print "File previously existed. Removing and rewriting."
-		os.remove(out_file)
+		subprocess.call(["rm", out_file])
 		
 	## Writing the standard power spectrum to a FITS file
 	thdulist = fits.HDUList([prihdu, tbhdu])
