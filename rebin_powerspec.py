@@ -6,7 +6,8 @@ import matplotlib.font_manager as font_manager
 from matplotlib.ticker import ScalarFormatter
 import matplotlib.ticker as ticker
 from datetime import datetime
-import os
+import os.path
+import subprocess
 from tools import type_positive_float
 
 __author__ = "Abigail Stevens"
@@ -68,7 +69,7 @@ def fits_out(out_file, rb_out_file, dt, n_bins, nyquist_freq, num_segments, \
 		'ERROR: Re-binned output file must have extension ".fits".'
 	if os.path.isfile(rb_out_file):
 # 		print "File previously existed. Removing and rewriting."
-		os.remove(rb_out_file)
+		subprocess.call(["rm", rb_out_file])
 	
 	## Writing the re-binned power spectrum to a FITS file
 	thdulist = fits.HDUList([prihdu, tbhdu])

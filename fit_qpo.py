@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import leastsq ## Levenberg-Marquadt Algorithm
 from astropy.io import fits
-from os import system
 import argparse
+import subprocess
 
 __author__ = "Abigail Stevens"
 __author_email__ = "A.L.Stevens at uva.nl"
@@ -104,7 +104,7 @@ def make_plots(freq, npn_bg_corr, best_qpo, best_pl, best_resid, npn_err):
 
 	fig.subplots_adjust(hspace=0)
 	plt.savefig('PSD_fit.png')
-	system("open PSD_fit.png")
+	subprocess.call(["open", "PSD_fit.png"])
 
 
 ################################################################################
