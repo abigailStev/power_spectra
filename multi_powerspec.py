@@ -178,7 +178,7 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
     ## Getting averages. Total means over all segments of all data files.
     power = total_power_sum / meta_dict['num_seg']
     mean_rate_total = sum_rate_total / meta_dict['num_seg']
-    print "Total segments =", meta_dict['num_seg]'
+    print "Total segments =", meta_dict['num_seg']
     print "Mean rate total =", mean_rate_total
     
     ######################################################
