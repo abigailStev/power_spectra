@@ -20,8 +20,7 @@ Written in Python 2.7, Abigail Stevens, A.L.Stevens at uva.nl, 2013-2015
 """
 
 ################################################################################ 
-def dat_output(out_file, data_file_list, dt, n_bins, nyquist_freq, num_seconds,\
-    total_seg, total_exposure, mean_rate_total, freq, fracrms_power, \
+def dat_output(out_file, data_file_list, meta_dict, total_exposure, mean_rate_total, freq, fracrms_power, \
     fracrms_err):
     """
             dat_output
@@ -35,13 +34,13 @@ def dat_output(out_file, data_file_list, dt, n_bins, nyquist_freq, num_seconds,\
         out.write("#\t\tPower spectrum of multiple data files")
         out.write("\n# Date(YYYY-MM-DD localtime): %s" % str(datetime.now()))
         out.write("\n# Data file list: %s" % data_file_list)
-        out.write("\n# Time bin size = %.21f seconds" % dt)
-        out.write("\n# Number of bins per segment = %d" % n_bins)
-        out.write("\n# Number of seconds per segment = %d" % num_seconds)
-        out.write("\n# Total number of segments = %d " % total_seg)
+        out.write("\n# Time bin size = %.21f seconds" % meta_dict['dt'])
+        out.write("\n# Number of bins per segment = %d" % meta_dict['n_bins'])
+        out.write("\n# Number of seconds per segment = %d" % meta_dict['num_seconds'])
+        out.write("\n# Total number of segments = %d " % meta_dict['num_seg'])
         out.write("\n# Total exposure time = %d seconds" % total_exposure)
         out.write("\n# Mean count rate = %.8f" % mean_rate_total)
-        out.write("\n# Nyquist frequency = %.4f" % nyquist_freq)
+        out.write("\n# Nyquist frequency = %.4f" % meta_dict['nyquist'])
         out.write("\n# ")
         out.write("\n# Column 1: Frequency [Hz]")
         out.write("\n# Column 2: Fractional rms normalized mean power")
@@ -58,9 +57,8 @@ def dat_output(out_file, data_file_list, dt, n_bins, nyquist_freq, num_seconds,\
 
 
 ################################################################################
-def fits_output(out_file, data_file_list, dt, n_bins, nyquist_freq, \
-    num_seconds, total_seg, total_exposure, mean_rate_total, freq, \
-    fracrms_power, fracrms_err):
+def fits_output(out_file, data_file_list, meta_dict, total_exposure, \
+    mean_rate_total, freq, fracrms_power, fracrms_err):
     """
                 fits_output
 
@@ -75,15 +73,15 @@ def fits_output(out_file, data_file_list, dt, n_bins, nyquist_freq, \
     prihdr.set('TYPE', "Power spectrum of multiple event lists")
     prihdr.set('DATE', str(datetime.now()), "YYYY-MM-DD localtime")
     prihdr.set('IN_LIST', data_file_list)
-    prihdr.set('DT', dt, "seconds")
-    prihdr.set('N_BINS', n_bins, "Time bins per segment")
-    prihdr.set('SECONDS', num_seconds, "Seconds per segment")
-    prihdr.set('SEGMENTS', total_seg, "Segments in the whole light curve")
-    prihdr.set('EXPOSURE', total_seg * n_bins * dt, "seconds, of whole light "\
+    prihdr.set('DT', meta_dict['dt'], "seconds")
+    prihdr.set('N_BINS', meta_dict['n_bins'], "Time bins per segment")
+    prihdr.set('SECONDS', meta_dict['num_seconds'], "Seconds per segment")
+    prihdr.set('SEGMENTS', meta_dict['num_seg'], "Segments in the whole light curve")
+    prihdr.set('EXPOSURE', total_exposure, "seconds, of whole light "\
         "curve")
-    prihdr.set('DETCHANS', detchans, "Number of detector energy channels")
+    prihdr.set('DETCHANS', meta_dict['detchans'], "Number of detector energy channels")
     prihdr.set('MEANRATE', mean_rate_total, "counts/second")
-    prihdr.set('NYQUIST', nyquist_freq, "Hz")
+    prihdr.set('NYQUIST', meta_dict['nyquist'], "Hz")
     prihdu = fits.PrimaryHDU(header=prihdr)
 
     ## Making FITS table for standard power spectrum
@@ -145,10 +143,13 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
     total_power_sum = np.zeros(n_bins)
     sum_rate_total = 0
     total_seg = 0
-    
-    print "DT = %.15f seconds" % dt
-    print "N_bins = %d" % n_bins
-    print "Nyquist freq = %f" % nyquist_freq
+
+    meta_dict = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds, 'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins, 'detchans': 64}
+    print meta_dict['dt']
+
+    print "DT = %.15f seconds" % meta_dict['dt']
+    print "N_bins = %d" % meta_dict['n_bins']
+    print "Nyquist freq = %f" % meta_dict['nyquist']
 
     ############################
     ## THE BIG LOOP STARTS HERE
@@ -157,7 +158,7 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
     for in_file in data_files:
 
         power_sum, sum_rate_whole, num_seg = \
-            psd.read_and_use_segments(in_file, n_bins, dt, test)
+            psd.read_and_use_segments(in_file, meta_dict, test)
         
         print "Segments for this file: %d\n" % num_seg
         
@@ -169,14 +170,15 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
     
     ## End of for-loop
     print " "
+    meta_dict['num_seg'] = total_seg
 
-    total_exposure = total_seg * dt * n_bins  # Total exposure time
+    total_exposure = meta_dict['num_seg'] * meta_dict['num_seconds']
     print "Total exposure time =", total_exposure
 
     ## Getting averages. Total means over all segments of all data files.
-    power = total_power_sum / float(total_seg)
-    mean_rate_total = sum_rate_total / float(total_seg)
-    print "Total segments =", total_seg
+    power = total_power_sum / meta_dict['num_seg']
+    mean_rate_total = sum_rate_total / meta_dict['num_seg']
+    print "Total segments =", meta_dict['num_seg]'
     print "Mean rate total =", mean_rate_total
     
     ######################################################
@@ -188,21 +190,18 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
     print "Total RMS:", rms_total, "(unnorm)"
     
     freq, power, leahy_power, fracrms_power, fracrms_err = \
-        psd.normalize(power, n_bins, dt, num_seconds, total_seg,\
-        mean_rate_total, True)
+        psd.normalize(power, meta_dict, mean_rate_total, True)
     
     #########################
     ## Output, .dat or .fits
     #########################
     
     if out_file[-4:].lower() == "fits":
-        fits_output(out_file, infile_list, dt, n_bins, nyquist_freq, \
-            num_seconds, total_seg, total_exposure, mean_rate_total, freq,\
-            fracrms_power, fracrms_err)
+        fits_output(out_file, infile_list, meta_dict, total_exposure, \
+            mean_rate_total, freq, fracrms_power, fracrms_err)
     elif out_file[-3:].lower() == "dat":	
-        dat_output(out_file, infile_list, dt, n_bins, nyquist_freq, \
-            num_seconds, total_seg, total_exposure, mean_rate_total, freq,\
-            fracrms_power, fracrms_err)
+        dat_output(out_file, infile_list, meta_dict, total_exposure, \
+            mean_rate_total, freq, fracrms_power, fracrms_err)
     else:
         raise Exception("ERROR: Output file must be of type .dat or .fits.")
 
