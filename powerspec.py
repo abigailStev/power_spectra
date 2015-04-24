@@ -20,7 +20,8 @@ Written in Python 2.7, Abigail Stevens, A.L.Stevens at uva.nl, 2013-2015
 """
 
 ################################################################################
-def dat_out(out_file, in_file, meta, mean_rate_whole, freq, fracrms_power, fracrms_err, leahy_power):
+def dat_out(out_file, in_file, meta_dict, mean_rate_whole, freq, fracrms_power,\
+    fracrms_err, leahy_power):
     """
     Writes power spectrum to an ASCII output file.
 
@@ -32,7 +33,7 @@ def dat_out(out_file, in_file, meta, mean_rate_whole, freq, fracrms_power, fracr
     infile : string
         Description.
 
-    meta : dict
+    meta_dict : dict
         Description.
 
     mean_rate_whole : double
@@ -61,14 +62,14 @@ def dat_out(out_file, in_file, meta, mean_rate_whole, freq, fracrms_power, fracr
         out.write("#\t\tPower spectrum")
         out.write("\n# Date(YYYY-MM-DD localtime): %s" % str(datetime.now()))
         out.write("\n# Data: %s" % in_file)
-        out.write("\n# Time bin size = %.21f seconds" % meta['dt'])
-        out.write("\n# Number of bins per segment = %d" % meta['n_bins'])
+        out.write("\n# Time bin size = %.21f seconds" % meta_dict['dt'])
+        out.write("\n# Number of bins per segment = %d" % meta_dict['n_bins'])
         out.write("\n# Number of segments per light curve = %d" % \
-                  meta['num_seg'])
+                  meta_dict['num_seg'])
         out.write("\n# Exposure time = %d seconds" % \
-                  (meta['num_seg'] * meta['n_bins'] * meta['dt']))
+                  (meta_dict['num_seg'] * meta_dict['num_seconds']))
         out.write("\n# Mean count rate = %.8f" % mean_rate_whole)
-        out.write("\n# Nyquist frequency = %.4f" % meta['nyquist'])
+        out.write("\n# Nyquist frequency = %.4f" % meta_dict['nyquist'])
         out.write("\n# ")
         out.write("\n# Column 1: Frequency [Hz]")
         out.write("\n# Column 2: Fractional rms^2 normalized mean power")
@@ -84,8 +85,8 @@ def dat_out(out_file, in_file, meta, mean_rate_whole, freq, fracrms_power, fracr
 
 
 ################################################################################
-def fits_out(out_file, in_file, meta, mean_rate_whole, freq, fracrms_power, \
-    fracrms_err, leahy_power):
+def fits_out(out_file, in_file, meta_dict, mean_rate_whole, freq, \
+    fracrms_power, fracrms_err, leahy_power):
     """
     Writes power spectrum to a FITS output file.
 
@@ -97,7 +98,7 @@ def fits_out(out_file, in_file, meta, mean_rate_whole, freq, fracrms_power, \
     infile : string
         Description.
 
-    meta : dict
+    meta_dict : dict
         Description.
 
     mean_rate_whole : double
@@ -120,21 +121,23 @@ def fits_out(out_file, in_file, meta, mean_rate_whole, freq, fracrms_power, \
     nothing
     """
     print "\nOutput file: %s" % out_file
-    meta['detchans']=64
+    meta_dict['detchans']=64
 
     ## Making header for standard power spectrum
     prihdr = fits.Header()
     prihdr.set('TYPE', "Power spectrum")
     prihdr.set('DATE', str(datetime.now()), "YYYY-MM-DD localtime")
     prihdr.set('EVTLIST', in_file)
-    prihdr.set('DT', meta['dt'], "seconds")
-    prihdr.set('N_BINS', meta['n_bins'], "time bins per segment")
-    prihdr.set('SEGMENTS', meta['num_seg'], "segments in the whole light curve")
-    prihdr.set('EXPOSURE', meta['num_seg'] * meta['n_bins'] * meta['dt'], \
+    prihdr.set('DT', meta_dict['dt'], "seconds")
+    prihdr.set('N_BINS', meta_dict['n_bins'], "time bins per segment")
+    prihdr.set('SEGMENTS', meta_dict['num_seg'], "segments in the whole light "\
+        "curve")
+    prihdr.set('EXPOSURE', meta_dict['num_seg'] * meta_dict['num_seconds'], \
         "seconds, of light curve")
-    prihdr.set('DETCHANS', meta['detchans'], "Number of detector energy channels")
+    prihdr.set('DETCHANS', meta_dict['detchans'], "Number of detector energy "\
+        "channels")
     prihdr.set('MEANRATE', mean_rate_whole, "counts/second")
-    prihdr.set('NYQUIST', meta['nyquist'], "Hz")
+    prihdr.set('NYQUIST', meta_dict['nyquist'], "Hz")
     prihdu = fits.PrimaryHDU(header=prihdr)
 
     ## Making FITS table for standard power spectrum
@@ -148,8 +151,8 @@ def fits_out(out_file, in_file, meta, mean_rate_whole, freq, fracrms_power, \
     tbhdu = fits.BinTableHDU.from_columns(cols)
 
     ## If the file already exists, remove it (still working on just updating it)
-    assert out_file[-4:].lower() == "fits", \
-        'ERROR: Standard output file must have extension ".fits".'
+    assert out_file[-4:].lower() == "fits", "ERROR: Standard output file must "\
+        "have extension '.fits'."
     if os.path.isfile(out_file):
         subprocess.call(["rm", out_file])
 
@@ -159,7 +162,7 @@ def fits_out(out_file, in_file, meta, mean_rate_whole, freq, fracrms_power, \
 
 
 ################################################################################
-def normalize(power, meta, mean_rate, noisy):
+def normalize(power, meta_dict, mean_rate, noisy):
     """
     Generates the Fourier frequencies, removes negative frequencies, normalizes
     the power by Leahy and fractional rms^2 normalizations, and computes the
@@ -170,7 +173,7 @@ def normalize(power, meta, mean_rate, noisy):
     power : np.array of doubles
         Description.
 
-    meta : dict
+    meta_dict : dict
         Description.
 
     mean_rate : double
@@ -199,23 +202,25 @@ def normalize(power, meta, mean_rate, noisy):
     """
 
     ## Computing the FFT sample frequencies (in Hz)
-    freq = fftpack.fftfreq(meta['n_bins'], d=meta['dt'])
-    ## Ensuring that we're only using and saving the positive frequency values
-    ## (and associated power values)
-    max_index = np.argmax(freq)+1  ## because in python, the scipy fft makes the
-        ## nyquist frequency negative, and we want it to be positive! (it is
-        ## actually both pos and neg)
+    freq = fftpack.fftfreq(meta_dict['n_bins'], d=meta_dict['dt'])
+        ## Ensuring that we're only using and saving the positive frequency
+        ## values (and associated power values)
+    max_index = np.searchsorted(freq, meta_dict['nyquist'])  ## because in
+        ## python, the scipy fft makes the nyquist frequency negative, and we
+        ## want it to be positive! (it is actually both pos and neg)
+    print meta_dict['nyquist']
+    print max_index
     freq = np.abs(freq[0:max_index + 1])  ## because it slices at end-1, and we
         ## want to include 'max_index'; abs is because the nyquist freq is both
         ## pos and neg, and we want it pos here.
     power = power[0:max_index + 1]
 
     ## Computing the error on the mean power
-    err_power = power / np.sqrt(meta['num_seg'] * meta['n_bins'])
+    err_power = power / np.sqrt(meta_dict['num_seg'] * meta_dict['n_bins'])
 
     # Absolute rms^2 normalization
-    absrms_power = 2.0 * power * meta['dt'] / meta['n_bins']
-    absrms_err = 2.0 * err_power * meta['dt'] / meta['n_bins']
+    absrms_power = 2.0 * power * meta_dict['dt'] / meta_dict['n_bins']
+    absrms_err = 2.0 * err_power * meta_dict['dt'] / meta_dict['n_bins']
 
     ## Leahy normalization
     leahy_power = absrms_power / mean_rate
@@ -245,21 +250,21 @@ def normalize(power, meta, mean_rate, noisy):
     print "Frequency of maximum power:", signal_freq
 
     ## Computing and printing the rms of the signal
-    min_freq_mask = freq < signal_freq  ## we want the last 'True' element
-    max_freq_mask = freq > signal_freq  ## we want the first 'True' element
-    j_min = list(min_freq_mask).index(False)
-    j_max = list(max_freq_mask).index(True)
-    ## Extracting only the signal frequencies of the power
-    signal_pow = np.float64(fracrms_power[j_min:j_max])
-
-    ## Computing variance and rms of the signal
-    signal_variance = np.sum(signal_pow * meta['df'])
-    print "Signal variance:", signal_variance, "(frac rms2)"
-    rms_signal = np.sqrt(signal_variance)  ## should be a few % in frac rms units
-    print "Signal RMS:", rms_signal, "(frac rms2)"
+    # min_freq_mask = freq < signal_freq  ## we want the last 'True' element
+    # max_freq_mask = freq > signal_freq  ## we want the first 'True' element
+    # j_min = list(min_freq_mask).index(False)
+    # j_max = list(max_freq_mask).index(True)
+    # ## Extracting only the signal frequencies of the power
+    # signal_pow = np.float64(fracrms_power[j_min:j_max])
+    #
+    # ## Computing variance and rms of the signal
+    # signal_variance = np.sum(signal_pow * meta_dict['df'])
+    # print "Signal variance:", signal_variance, "(frac rms2)"
+    # rms_signal = np.sqrt(signal_variance)  ## should be a few % in frac rms units
+    # print "Signal RMS:", rms_signal, "(frac rms2)"
 
     ## Variance and rms of the whole averaged power spectrum
-    total_variance = np.sum(fracrms_power * meta['df'])
+    total_variance = np.sum(fracrms_power * meta_dict['df'])
     print "Total variance:", total_variance, "(frac rms2)"
     rms_total = np.sqrt(total_variance)
     print "Total RMS:", rms_total, "(frac rms2)"
@@ -296,7 +301,7 @@ def make_ps(rate):
 
 
 ################################################################################
-def extracted_in(in_file, meta, print_iterator, test):
+def extracted_in(in_file, meta_dict, print_iterator, test):
     """
             extracted_powerspec
 
@@ -318,15 +323,15 @@ def extracted_in(in_file, meta, print_iterator, test):
 
     ## Initializations
     sum_rate_whole = 0
-    power_sum = np.zeros(meta['n_bins'], dtype=np.float64)
+    power_sum = np.zeros(meta_dict['n_bins'], dtype=np.float64)
     num_seg = 0
     i = 0  # start of bin index to make segment of data for inner for-loop
-    j = meta['n_bins']  # end of bin index to make segment of data for inner for-loop
+    j = meta_dict['n_bins']  # end of bin index to make segment of data for inner for-loop
 
     print data[1].field(0) - data[0].field(0)
 
-    assert meta['dt'] == (data[1].field(0) - data[0].field(0)), "ERROR: dt must be the"\
-        " same resolution as the extracted FITS data."
+    assert meta_dict['dt'] == (data[1].field(0) - data[0].field(0)), "ERROR: "\
+        "dt must be the same resolution as the extracted FITS data."
 
     ## Loop through segments of the data
     while j <= len(data.field(1)):  ## while we haven't reached the end of the
@@ -354,18 +359,16 @@ def extracted_in(in_file, meta, print_iterator, test):
 
         ## Incrementing the counters and indices
         i = j
-        j += meta['n_bins']
+        j += meta_dict['n_bins']
         ## Since the for-loop goes from i to j-1 (since that's how the range
         ## function works) it's ok that we set i=j here for the next round.
         ## This will not cause double-counting rows or skipping rows.
-
-    ## End of while-loop
 
     return power_sum, sum_rate_whole, num_seg
 
 
 ################################################################################
-def fits_in(in_file, meta, print_iterator, test):
+def fits_in(in_file, meta_dict, print_iterator, test):
     """
             fits_in
 
@@ -386,13 +389,13 @@ def fits_in(in_file, meta, print_iterator, test):
     fits_hdu.close()
 
     sum_rate_whole = 0
-    power_sum = np.zeros(meta['n_bins'], dtype=np.float64)
+    power_sum = np.zeros(meta_dict['n_bins'], dtype=np.float64)
     num_seg = 0
     lightcurve = np.asarray([])
 
     start_time = data.field('TIME')[0]
     final_time = data.field('TIME')[-1]
-    end_time = start_time + (meta['dt'] * meta['n_bins'])
+    end_time = start_time + (meta_dict['dt'] * meta_dict['n_bins'])
 
     ## Filter data based on pcu
 # 	PCU2_mask = data.field('PCUID') == 2
@@ -424,11 +427,11 @@ def fits_in(in_file, meta, print_iterator, test):
 
         if len(time) > 0:
             num_seg += 1
-            rate_1d = tools.make_1Dlightcurve(time, meta['n_bins'], meta['dt'], start_time)
+            rate_1d = tools.make_1Dlightcurve(time, meta_dict['n_bins'], meta_dict['dt'], start_time)
             lightcurve = np.concatenate((lightcurve, rate_1d))
 
             power_segment, mean_rate_segment = make_ps(rate_1d)
-            assert int(len(power_segment)) == meta['n_bins']
+            assert int(len(power_segment)) == meta_dict['n_bins']
             power_sum += power_segment
             sum_rate_whole += mean_rate_segment
 
@@ -446,22 +449,20 @@ def fits_in(in_file, meta, print_iterator, test):
             if test and (num_seg == 1):  # Testing
                 np.savetxt('tmp_lightcurve.dat', lightcurve, fmt='%d')
                 break
-            start_time += (meta['n_bins'] * meta['dt'])
-            end_time += (meta['n_bins'] * meta['dt'])
+            start_time += (meta_dict['n_bins'] * meta_dict['dt'])
+            end_time += (meta_dict['n_bins'] * meta_dict['dt'])
 
         elif len(time) == 0:
             print "No counts in this segment."
             start_time = all_time[0]
-            end_time = start_time + (meta['n_bins'] * meta['dt'])
+            end_time = start_time + (meta_dict['n_bins'] * meta_dict['dt'])
         ## End of 'if there are counts in this segment'
-
-    ## End of while-loop
 
     return power_sum, sum_rate_whole, num_seg
 
 
 ################################################################################
-def dat_in(in_file, meta, print_iterator, test):
+def dat_in(in_file, meta_dict, print_iterator, test):
     """
             dat_in
 
@@ -478,7 +479,7 @@ def dat_in(in_file, meta, print_iterator, test):
     time = np.asarray([])
     energy = np.asarray([])
     sum_rate_whole = 0
-    power_sum = np.zeros(meta['n_bins'], dtype=np.float64)
+    power_sum = np.zeros(meta_dict['n_bins'], dtype=np.float64)
     num_seg = 0
     lightcurve = np.asarray([])
 
@@ -493,7 +494,7 @@ def dat_in(in_file, meta, print_iterator, test):
     if start_time is -99:
         raise Exception("ERROR: Start time of data was not read in. Exiting.")
 
-    end_time = start_time + (meta['dt'] * meta['n_bins'])
+    end_time = start_time + meta_dict['num_seconds']
     assert end_time > start_time, "ERROR: End time must come after start time "\
         "of the segment."
 
@@ -515,18 +516,18 @@ def dat_in(in_file, meta, print_iterator, test):
                     energy = np.append(energy, current_chan)
 
                 next_time = float(next_line[0])
-                next_end_time = end_time + (meta['dt'] * meta['n_bins'])
+                next_end_time = end_time + meta_dict['num_seconds']
 
                 if next_time >= end_time:  ## Triggered at the end of a segment
 
                     if len(time) > 0:
                         num_seg += 1
                         rate_2d, rate_1d = tools.make_lightcurve(time, energy,
-                            meta['n_bins'], meta['dt'], start_time)
+                            meta_dict['n_bins'], meta_dict['dt'], start_time)
                         lightcurve = np.concatenate((lightcurve, rate_1d))
 
                         power_segment, mean_rate_segment = make_ps(rate_1d)
-                        assert int(len(power_segment)) == meta['n_bins']
+                        assert int(len(power_segment)) == meta_dict['n_bins']
 
                         power_sum += power_segment
                         sum_rate_whole += mean_rate_segment
@@ -546,21 +547,20 @@ def dat_in(in_file, meta, print_iterator, test):
                             np.savetxt('lightcurve.dat', lightcurve, fmt='%d')
                             break
 
-                        start_time += (meta['n_bins'] * meta['dt'])
-                        end_time += (meta['n_bins'] * meta['dt'])
+                        start_time += meta_dict['num_seconds']
+                        end_time += meta_dict['num_seconds']
 
                     ## This next bit helps it handle gappy data; keep in mind
                     ## that end_time has already been incremented here
                     elif len(time) == 0:
                         start_time = next_time
-                        end_time = start_time + (meta['n_bins'] * meta['dt'])
-
+                        end_time = start_time + meta_dict['num_seconds']
 
     return power_sum, sum_rate_whole, num_seg
 
 
 ################################################################################
-def read_and_use_segments(in_file, meta, test):
+def read_and_use_segments(in_file, meta_dict, test):
     """
             read_and_use_segments
 
@@ -570,18 +570,18 @@ def read_and_use_segments(in_file, meta, test):
     'extracted_in' for easier readability.
 
     """
-    assert tools.power_of_two(meta['n_bins']) , "ERROR: n_bins must be a power"\
+    assert tools.power_of_two(meta_dict['n_bins']) , "ERROR: n_bins must be a power"\
         " of 2."
 
     print "Input file: %s" % in_file
 
-    if meta['n_bins'] == 32768:
+    if meta_dict['n_bins'] == 32768:
         print_iterator = int(10)
-    elif meta['n_bins'] < 32768:
+    elif meta_dict['n_bins'] < 32768:
         print_iterator = int(20)
-    elif meta['n_bins'] >= 2097152:
+    elif meta_dict['n_bins'] >= 2097152:
         print_iterator = int(1)
-    elif meta['n_bins'] >= 1048576:
+    elif meta_dict['n_bins'] >= 1048576:
         print_iterator = int(2)
     else:
         print_iterator = int(5)
@@ -594,13 +594,13 @@ def read_and_use_segments(in_file, meta, test):
     ## power spectrum can be taken, whereas data from lc was made in seextrct
     ## and so it's already populated as a light curve
     if (in_file[-5:].lower() == ".fits"):
-        power_sum, sum_rate_whole, num_seg = fits_in(in_file, meta, \
+        power_sum, sum_rate_whole, num_seg = fits_in(in_file, meta_dict, \
             print_iterator, test)
     elif (in_file[-4:].lower() == ".dat"):
-        power_sum, sum_rate_whole, num_seg = dat_in(in_file, meta, \
+        power_sum, sum_rate_whole, num_seg = dat_in(in_file, meta_dict, \
             print_iterator, test)
     elif (in_file[-3:].lower() == ".lc"):
-        power_sum, sum_rate_whole, num_seg = extracted_in(in_file, meta, \
+        power_sum, sum_rate_whole, num_seg = extracted_in(in_file, meta_dict,\
             print_iterator, test)
     else:
         raise Exception("ERROR: Input file type not recognized. Must be .dat, "\
@@ -638,32 +638,34 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
     df = 1.0 / float(num_seconds)
 
 
-    meta = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds, 'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins, 'detchans': 64}
-    print meta['dt']
+    meta_dict = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds, 'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins, 'detchans': 64}
+    print meta_dict['dt']
 
-    print "\nDT = %f seconds" % meta['dt']
-    print "N_bins = %d" % n_bins
-    print "Nyquist freq =", nyquist_freq
+    print "\nDT = %f seconds" % meta_dict['dt']
+    print "N_bins = %d" % meta_dict['n_bins']
+    print "Nyquist freq =", meta_dict['nyquist']
 
     ############################################################################
     ## Read in segments of a light curve or event list and make a power spectrum
     ############################################################################
 
-    power_sum, sum_rate_whole, num_seg = read_and_use_segments(in_file, meta, \
-                                                               test)
-    meta['num_seg'] = num_seg
+    power_sum, sum_rate_whole, num_seg = read_and_use_segments(in_file, \
+        meta_dict, test)
     print " "
 
-    print "\tTotal number of segments =", meta['num_seg']
+    meta_dict['num_seg'] = num_seg
+
+    assert isinstance(meta_dict, object)
+    print "\tTotal number of segments =", meta_dict['num_seg']
 
     #########################################################################
     ## Dividing sums by the number of segments to get an arithmetic average.
     #########################################################################
 
-    power = power_sum / meta['num_seg']
-    assert int(len(power)) == meta['n_bins'], "ERROR: Power should have length"\
+    power = power_sum / meta_dict['num_seg']
+    assert int(len(power)) == meta_dict['n_bins'], "ERROR: Power should have length"\
         " n_bins."
-    mean_rate_whole = sum_rate_whole / meta['num_seg']
+    mean_rate_whole = sum_rate_whole / meta_dict['num_seg']
     print "Mean count rate over whole lightcurve =", mean_rate_whole
 
     ################################
@@ -671,7 +673,7 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
     ################################
 
     freq, power, leahy_power, fracrms_power, fracrms_err = normalize(power, \
-        meta, mean_rate_whole, True)
+        meta_dict, mean_rate_whole, True)
         ## True = noisy light curve (a.k.a. using real data, or simulated light
         ## curve is given a non-zero noise level)
 
@@ -680,10 +682,10 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
     ###################################
 
     if out_file[-4:].lower() == "fits":
-        fits_out(out_file, in_file, meta, mean_rate_whole, freq, fracrms_power,\
+        fits_out(out_file, in_file, meta_dict, mean_rate_whole, freq, fracrms_power,\
             fracrms_err, leahy_power)
     elif out_file[-3:].lower() == "dat":
-        dat_out(out_file, in_file, meta, mean_rate_whole, freq, fracrms_power, \
+        dat_out(out_file, in_file, meta_dict, mean_rate_whole, freq, fracrms_power, \
             fracrms_err, leahy_power)
     else:
         raise Exception("ERROR: Output file must be type .dat or .fits.")
