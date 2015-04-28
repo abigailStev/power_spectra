@@ -10,12 +10,15 @@ import subprocess
 
 import tools  # https://github.com/abigailStev/whizzy_scripts
 
+__author__ = "Abigail Stevens"
+
 """
-        powerspec.py
+powerspec.py
 
 Makes a power spectrum averaged over segments from an RXTE event-mode data file.
+Type "powerspec.py -h" to see command line requirements and options.
 
-Written in Python 2.7, Abigail Stevens, A.L.Stevens at uva.nl, 2013-2015
+Abigail Stevens, A.L.Stevens at uva.nl, 2013-2015
 
 """
 

@@ -12,13 +12,17 @@ import os.path
 import subprocess
 from tools import type_positive_float
 
+
+__author__ = "Abigail Stevens"
+
 """
-        plot_rb_powerspec.py
+plot_rb_powerspec.py
 
 Plots a log power spectrum that has been re-binned in frequency, in the
 frequency domain.
+Type "rebin_powerspec.py -h" to see command line requirements and options.
 
-Written in Python 2.7, Abigail Stevens, A.L.Stevens at uva.nl, 2013-2015
+Abigail Stevens, A.L.Stevens at uva.nl, 2013-2015
 
 the module 'tools' is in my whizzy_scripts git repo.
 
