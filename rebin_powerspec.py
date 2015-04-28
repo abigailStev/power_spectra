@@ -45,7 +45,7 @@ def fits_out(out_file, rb_out_file, meta_dict, mean_rate_whole, rb_freq, \
     prihdr.set('REBIN', meta_dict['rebin_const'], "Freqs re-binned by REBIN * prev_bin_size")
     prihdr.set('DT', meta_dict['dt'], "seconds")
     prihdr.set('N_BINS', meta_dict['n_bins'], "time bins per segment")
-    prihdr.set('SEGMENTS', meta_dict['num_segments'], "segments in the whole light curve")
+    prihdr.set('SEGMENTS', meta_dict['num_seg'], "segments in the whole light curve")
     prihdr.set('EXPOSURE', meta_dict['exposure'], "seconds, of light "\
         "curve")
     prihdr.set('MEANRATE', mean_rate_whole, "counts/second")
@@ -238,7 +238,7 @@ if __name__ == "__main__":
     ##########################################
 
     try:
-        fits_hdu = fits.open(args.tab_file)
+        file_hdu = fits.open(args.tab_file)
     except IOError:
         print "\tERROR: File does not exist: %s" % args.tab_file
         exit()
@@ -286,7 +286,7 @@ if __name__ == "__main__":
     fits_out(args.tab_file, args.rb_out_file, meta_dict, mean_rate_whole, \
         rb_freq, rb_rms2, rb_err)
 
-    flx2xsp_out_out(args.rb_out_file, freq_min, freq_max, rb_freq, rb_rms2, \
+    flx2xsp_out(args.rb_out_file, freq_min, freq_max, rb_freq, rb_rms2, \
         rb_err)
 
 ################################################################################
