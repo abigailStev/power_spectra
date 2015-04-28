@@ -430,7 +430,8 @@ def fits_in(in_file, meta_dict, print_iterator, test):
 
         if len(time) > 0:
             num_seg += 1
-            rate_1d = tools.make_1Dlightcurve(time, meta_dict['n_bins'], meta_dict['dt'], start_time)
+            rate_1d = tools.make_1Dlightcurve(time, meta_dict['n_bins'], \
+                meta_dict['dt'], start_time)
             lightcurve = np.concatenate((lightcurve, rate_1d))
 
             power_segment, mean_rate_segment = make_ps(rate_1d)
@@ -573,8 +574,8 @@ def read_and_use_segments(in_file, meta_dict, test):
     'extracted_in' for easier readability.
 
     """
-    assert tools.power_of_two(meta_dict['n_bins']) , "ERROR: n_bins must be a power"\
-        " of 2."
+    assert tools.power_of_two(meta_dict['n_bins']) , "ERROR: n_bins must be a "\
+        "power of 2."
 
     print "Input file: %s" % in_file
 
@@ -641,7 +642,9 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
     df = 1.0 / float(num_seconds)
 
 
-    meta_dict = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds, 'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins, 'detchans': 64}
+    meta_dict = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds, \
+                 'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins, \
+                 'detchans': 64}
     print meta_dict['dt']
 
     print "\nDT = %f seconds" % meta_dict['dt']
@@ -666,8 +669,8 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
     #########################################################################
 
     power = power_sum / meta_dict['num_seg']
-    assert int(len(power)) == meta_dict['n_bins'], "ERROR: Power should have length"\
-        " n_bins."
+    assert int(len(power)) == meta_dict['n_bins'], "ERROR: Power should have "\
+        "length n_bins."
     mean_rate_whole = sum_rate_whole / meta_dict['num_seg']
     print "Mean count rate over whole lightcurve =", mean_rate_whole
 
@@ -685,11 +688,11 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
     ###################################
 
     if out_file[-4:].lower() == "fits":
-        fits_out(out_file, in_file, meta_dict, mean_rate_whole, freq, fracrms_power,\
-            fracrms_err, leahy_power)
+        fits_out(out_file, in_file, meta_dict, mean_rate_whole, freq, \
+            fracrms_power, fracrms_err, leahy_power)
     elif out_file[-3:].lower() == "dat":
-        dat_out(out_file, in_file, meta_dict, mean_rate_whole, freq, fracrms_power, \
-            fracrms_err, leahy_power)
+        dat_out(out_file, in_file, meta_dict, mean_rate_whole, freq, \
+            fracrms_power, fracrms_err, leahy_power)
     else:
         raise Exception("ERROR: Output file must be type .dat or .fits.")
 
@@ -724,8 +727,8 @@ if __name__ == "__main__":
         " for timestep between bins. Must be a power of 2, positive, integer. "\
         "[1]")
 
-# 	parser.add_argument('--test', action='store_true', dest='test', help='If \
-# present, only does a short test run.')
+# 	parser.add_argument('--test', action='store_true', dest='test', help="If "\
+#       "present, only does a short test run.")
 
     parser.add_argument('-t', '--test', type=int, default=0, choices={0,1}, \
         dest='test', help="Int flag: 0 if computing all segments, 1 if only "\
