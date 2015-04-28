@@ -206,24 +206,22 @@ def normalize(power, meta_dict, mean_rate, noisy):
 
     ## Computing the FFT sample frequencies (in Hz)
     freq = fftpack.fftfreq(meta_dict['n_bins'], d=meta_dict['dt'])
-        ## Ensuring that we're only using and saving the positive frequency
-        ## values (and associated power values)
-    max_index = np.searchsorted(freq, meta_dict['nyquist'])  ## because in
-        ## python, the scipy fft makes the nyquist frequency negative, and we
-        ## want it to be positive! (it is actually both pos and neg)
-    print meta_dict['nyquist']
-    print max_index
-    freq = np.abs(freq[0:max_index + 1])  ## because it slices at end-1, and we
-        ## want to include 'max_index'; abs is because the nyquist freq is both
+
+    ## Ensuring that we're only using and saving the positive frequency
+    ## values (and associated power values)
+    nyq_index = meta_dict['n_bins']/2
+    freq = np.abs(freq[0:nyq_index + 1])  ## because it slices at end-1, and we
+        ## want to include 'nyq_index'; abs is because the nyquist freq is both
         ## pos and neg, and we want it pos here.
-    power = power[0:max_index + 1]
+    power = power[0:nyq_index + 1]
 
     ## Computing the error on the mean power
-    err_power = power / np.sqrt(meta_dict['num_seg'] * meta_dict['n_bins'])
+    err_power = power / np.sqrt(float(meta_dict['num_seg']) * \
+                float(meta_dict['n_bins']))
 
-    # Absolute rms^2 normalization
-    absrms_power = 2.0 * power * meta_dict['dt'] / meta_dict['n_bins']
-    absrms_err = 2.0 * err_power * meta_dict['dt'] / meta_dict['n_bins']
+    ## Absolute rms^2 normalization
+    absrms_power = 2.0 * power * meta_dict['dt'] / float(meta_dict['n_bins'])
+    absrms_err = 2.0 * err_power * meta_dict['dt'] / float(meta_dict['n_bins'])
 
     ## Leahy normalization
     leahy_power = absrms_power / mean_rate
@@ -398,7 +396,7 @@ def fits_in(in_file, meta_dict, print_iterator, test):
 
     start_time = data.field('TIME')[0]
     final_time = data.field('TIME')[-1]
-    end_time = start_time + (meta_dict['dt'] * meta_dict['n_bins'])
+    end_time = start_time + meta_dict['num_seconds']
 
     ## Filter data based on pcu
 # 	PCU2_mask = data.field('PCUID') == 2
@@ -647,7 +645,6 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
     meta_dict = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds, \
                  'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins, \
                  'detchans': 64}
-    print meta_dict['dt']
 
     print "\nDT = %f seconds" % meta_dict['dt']
     print "N_bins = %d" % meta_dict['n_bins']
@@ -670,10 +667,10 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
     ## Dividing sums by the number of segments to get an arithmetic average.
     #########################################################################
 
-    power = power_sum / meta_dict['num_seg']
+    power = power_sum / float(meta_dict['num_seg'])
     assert int(len(power)) == meta_dict['n_bins'], "ERROR: Power should have "\
         "length n_bins."
-    mean_rate_whole = sum_rate_whole / meta_dict['num_seg']
+    mean_rate_whole = sum_rate_whole / float(meta_dict['num_seg'])
     print "Mean count rate over whole lightcurve =", mean_rate_whole
 
     ################################
