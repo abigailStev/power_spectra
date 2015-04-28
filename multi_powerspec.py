@@ -2,8 +2,7 @@
 
 import argparse
 import numpy as np
-from scipy import fftpack
-from astropy.io import fits  
+from astropy.io import fits
 from datetime import datetime
 import os.path
 import subprocess
@@ -23,8 +22,8 @@ Abigail Stevens, A.L.Stevens at uva.nl, 2013-2015
 """
 
 ################################################################################ 
-def dat_output(out_file, data_file_list, meta_dict, total_exposure, mean_rate_total, freq, fracrms_power, \
-    fracrms_err):
+def dat_output(out_file, data_file_list, meta_dict, total_exposure, \
+    mean_rate_total, freq, fracrms_power, fracrms_err):
     """
             dat_output
 
@@ -39,7 +38,8 @@ def dat_output(out_file, data_file_list, meta_dict, total_exposure, mean_rate_to
         out.write("\n# Data file list: %s" % data_file_list)
         out.write("\n# Time bin size = %.21f seconds" % meta_dict['dt'])
         out.write("\n# Number of bins per segment = %d" % meta_dict['n_bins'])
-        out.write("\n# Number of seconds per segment = %d" % meta_dict['num_seconds'])
+        out.write("\n# Number of seconds per segment = %d" % \
+                  meta_dict['num_seconds'])
         out.write("\n# Total number of segments = %d " % meta_dict['num_seg'])
         out.write("\n# Total exposure time = %d seconds" % total_exposure)
         out.write("\n# Mean count rate = %.8f" % mean_rate_total)
@@ -79,10 +79,12 @@ def fits_output(out_file, data_file_list, meta_dict, total_exposure, \
     prihdr.set('DT', meta_dict['dt'], "seconds")
     prihdr.set('N_BINS', meta_dict['n_bins'], "Time bins per segment")
     prihdr.set('SECONDS', meta_dict['num_seconds'], "Seconds per segment")
-    prihdr.set('SEGMENTS', meta_dict['num_seg'], "Segments in the whole light curve")
+    prihdr.set('SEGMENTS', meta_dict['num_seg'], "Segments in the whole light "\
+        "curve")
     prihdr.set('EXPOSURE', total_exposure, "seconds, of whole light "\
         "curve")
-    prihdr.set('DETCHANS', meta_dict['detchans'], "Number of detector energy channels")
+    prihdr.set('DETCHANS', meta_dict['detchans'], "Number of detector energy "\
+        "channels")
     prihdr.set('MEANRATE', mean_rate_total, "counts/second")
     prihdr.set('NYQUIST', meta_dict['nyquist'], "Hz")
     prihdu = fits.PrimaryHDU(header=prihdr)
@@ -147,7 +149,9 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
     sum_rate_total = 0
     total_seg = 0
 
-    meta_dict = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds, 'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins, 'detchans': 64}
+    meta_dict = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds, \
+                 'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins, \
+                 'detchans': 64}
     print meta_dict['dt']
 
     print "DT = %.15f seconds" % meta_dict['dt']
@@ -187,6 +191,7 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
     ######################################################
     ## Normalizing the power spectrum and computing error
     ######################################################
+
     total_variance = np.sum(power * df)
     print "Total variance:", total_variance, "(unnorm)"
     rms_total = np.sqrt(total_variance)
