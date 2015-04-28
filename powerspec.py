@@ -435,7 +435,9 @@ def fits_in(in_file, meta_dict, print_iterator, test):
             lightcurve = np.concatenate((lightcurve, rate_1d))
 
             power_segment, mean_rate_segment = make_ps(rate_1d)
-            assert int(len(power_segment)) == meta_dict['n_bins']
+            assert int(len(power_segment)) == meta_dict['n_bins'], "ERROR: "\
+                "Something went wrong in make_ps. Length of power spectrum "\
+                "segment  != n_bins."
             power_sum += power_segment
             sum_rate_whole += mean_rate_segment
 
@@ -453,13 +455,13 @@ def fits_in(in_file, meta_dict, print_iterator, test):
             if test and (num_seg == 1):  # Testing
                 np.savetxt('tmp_lightcurve.dat', lightcurve, fmt='%d')
                 break
-            start_time += (meta_dict['n_bins'] * meta_dict['dt'])
-            end_time += (meta_dict['n_bins'] * meta_dict['dt'])
+            start_time += meta_dict['num_seconds']
+            end_time += meta_dict['num_seconds']
 
         elif len(time) == 0:
             print "No counts in this segment."
             start_time = all_time[0]
-            end_time = start_time + (meta_dict['n_bins'] * meta_dict['dt'])
+            end_time = start_time + meta_dict['num_seconds']
         ## End of 'if there are counts in this segment'
 
     return power_sum, sum_rate_whole, num_seg
