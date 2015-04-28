@@ -10,12 +10,15 @@ import subprocess
 import powerspec as psd  # https://github.com/abigailStev/power_spectra
 import tools  # https://github.com/abigailStev/whizzy_scripts
 
+__author__ = "Abigail Stevens"
+
 """
         multi_powerspec.py
 
 Makes an averaged power spectrum from multiple event-mode data files from RXTE.
+Type "multi_powerspec.py -h" to see command line requirements and options.
 
-Written in Python 2.7, Abigail Stevens, A.L.Stevens at uva.nl, 2013-2015
+Abigail Stevens, A.L.Stevens at uva.nl, 2013-2015
 
 """
 
