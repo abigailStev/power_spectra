@@ -12,7 +12,6 @@ import os.path
 import subprocess
 from tools import type_positive_float
 
-
 __author__ = "Abigail Stevens"
 
 """
@@ -29,11 +28,9 @@ the module 'tools' is in my whizzy_scripts git repo.
 """
 
 ################################################################################
-def fits_out(out_file, rb_out_file, dt, n_bins, nyquist_freq, num_segments,
-    mean_rate_whole, rebin_const, rb_freq, rb_rms2, rb_err):
+def fits_out(out_file, rb_out_file, meta_dict, mean_rate_whole, rb_freq, \
+    rb_rms2, rb_err):
     """
-                fits_out
-
     Writes a frequency re-binned power spectrum to a FITS file.
 
     """
@@ -45,14 +42,14 @@ def fits_out(out_file, rb_out_file, dt, n_bins, nyquist_freq, num_segments,
     prihdr.set('TYPE', "Re-binned power spectrum")
     prihdr.set('DATE', str(datetime.now()), "YYYY-MM-DD localtime")
     prihdr.set('UNBINOUT', out_file, "Corresponding un-binned output.")
-    prihdr.set('REBIN', rebin_const, "Freqs re-binned by REBIN * prev_bin_size")
-    prihdr.set('DT', dt, "seconds")
-    prihdr.set('N_BINS', n_bins, "time bins per segment")
-    prihdr.set('SEGMENTS', num_segments, "segments in the whole light curve")
-    prihdr.set('EXPOSURE', num_segments * n_bins * dt, "seconds, of light "\
+    prihdr.set('REBIN', meta_dict['rebin_const'], "Freqs re-binned by REBIN * prev_bin_size")
+    prihdr.set('DT', meta_dict['dt'], "seconds")
+    prihdr.set('N_BINS', meta_dict['n_bins'], "time bins per segment")
+    prihdr.set('SEGMENTS', meta_dict['num_segments'], "segments in the whole light curve")
+    prihdr.set('EXPOSURE', meta_dict['exposure'], "seconds, of light "\
         "curve")
     prihdr.set('MEANRATE', mean_rate_whole, "counts/second")
-    prihdr.set('NYQUIST', nyquist_freq, "Hz")
+    prihdr.set('NYQUIST', meta_dict['nyquist'], "Hz")
     prihdu = fits.PrimaryHDU(header=prihdr)
 
     ## Making FITS table for re-binned power spectrum (extension 1)
@@ -77,10 +74,8 @@ def fits_out(out_file, rb_out_file, dt, n_bins, nyquist_freq, num_segments,
 
 
 ################################################################################
-def dat_out(rb_out, freq_min, freq_max, rb_freq, rb_rms2, rb_err):
+def flx2xsp_out(rb_out, freq_min, freq_max, rb_freq, rb_rms2, rb_err):
     """
-            dat_out
-
     Makes the correct output table for FLX2XSP.
 
     """
@@ -101,8 +96,6 @@ def dat_out(rb_out, freq_min, freq_max, rb_freq, rb_rms2, rb_err):
 ################################################################################
 def geometric_rebinning(freq, power, err_power, rebin_const):
     """
-            geometric_rebinning
-
     Re-bins the power spectrum in frequency space by some re-binning constant
     (rebin_const > 1).
 
@@ -169,8 +162,6 @@ def geometric_rebinning(freq, power, err_power, rebin_const):
 ################################################################################
 def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
     """
-            plot_rb
-
     Plots the re-binned power spectrum.
 
     """
@@ -246,33 +237,33 @@ if __name__ == "__main__":
     ## Reading in power spectrum from a table
     ##########################################
 
-    if args.tab_file[-4:].lower() == ".dat":
+    try:
+        fits_hdu = fits.open(args.tab_file)
+    except IOError:
+        print "\tERROR: File does not exist: %s" % args.tab_file
+        exit()
 
-        table = np.loadtxt(args.tab_file, comments='#')
-        freq = np.asarray(table[:,0])  # frequency, in Hz
-        rms2 = np.asarray(table[:,1])  # fractional rms^2 power
-        error = np.asarray(table[:,2])  # error on power
+    table = file_hdu[1].data
+    freq = table.field('FREQUENCY')  # frequency, in Hz
+    rms2 = table.field('POWER')  # fractional rms^2 power
+    error = table.field('ERROR')  # error on power
 
-    elif args.tab_file[-5:].lower() == ".fits":
-
-        file_hdu = fits.open(args.tab_file)
-        table = file_hdu[1].data
-        file_hdu.close()
-        freq = table.field('FREQUENCY')  # frequency, in Hz
-        rms2 = table.field('POWER')  # fractional rms^2 power
-        error = table.field('ERROR')  # error on power
-
-    else:
-
-        raise Exception("ERROR: File type not recognized. Must have extension "\
-            ".dat or .fits.")
+    mean_rate_whole = file_hdu[0].header['MEANRATE']
+    meta_dict = {'dt': file_hdu[0].header['DT'], \
+                 'nyquist': file_hdu[0].header['NYQUIST'], \
+                 'n_bins': file_hdu[0].header['N_BINS'], \
+                 'detchans': file_hdu[0].header['DETCHANS'], \
+                 'num_seg' : file_hdu[0].header['SEGMENTS'], \
+                 'rebin_const' : args.rebin_const, \
+                 'exposure' : file_hdu[0].header['EXPOSURE']}
+    file_hdu.close()
 
     ################################################
     ## Re-binning the power spectrum by rebin_const
     ################################################
 
     rb_freq, rb_rms2, rb_err, freq_min, freq_max = geometric_rebinning(freq, \
-        rms2, error, args.rebin_const)
+        rms2, error, meta_dict['rebin_const'])
 
     ########################################
     ## Want to plot nu * P(nu) in log space
@@ -285,25 +276,17 @@ if __name__ == "__main__":
     ## Plotting!
     #############
 
-    plot_rb(args.plot_file, args.rebin_const, args.prefix, rb_freq, vpv, \
-        err_vpv)
+    plot_rb(args.plot_file, meta_dict['rebin_const'], args.prefix, rb_freq, \
+        vpv, err_vpv)
 
     ##########################################################
     ## Writing the re-binned power spectrum to an output file
     ##########################################################
 
-    file_hdu = fits.open(args.tab_file)
-    dt = file_hdu[0].header['DT']
-    n_bins = file_hdu[0].header['N_BINS']
-    nyquist_freq = file_hdu[0].header['NYQUIST']
-    num_segments = file_hdu[0].header['SEGMENTS']
-    mean_rate_whole = file_hdu[0].header['MEANRATE']
-    file_hdu.close()
+    fits_out(args.tab_file, args.rb_out_file, meta_dict, mean_rate_whole, \
+        rb_freq, rb_rms2, rb_err)
 
-    fits_out(args.tab_file, args.rb_out_file, dt, n_bins, nyquist_freq, \
-        num_segments, mean_rate_whole, args.rebin_const, rb_freq, rb_rms2, \
+    flx2xsp_out_out(args.rb_out_file, freq_min, freq_max, rb_freq, rb_rms2, \
         rb_err)
-
-    dat_out(args.rb_out_file, freq_min, freq_max, rb_freq, rb_rms2, rb_err)
 
 ################################################################################
