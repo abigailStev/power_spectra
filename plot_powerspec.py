@@ -57,17 +57,18 @@ def main(tab_file, plot_file, prefix):
 	ax.plot(freq, fracrms, linewidth=2)
 # 	ax.errorbar(freq, fracrms, xerr=None, yerr=error)
 
-	ax.set_xlim(freq[1],np.max(freq))
-	ax.set_ylim(0, 0.012)
+# 	ax.set_xlim(freq[1],np.max(freq))
+# 	ax.set_xlim(freq[1], 420)
+# 	ax.set_ylim(-0.05, 0.4)
 	## Setting the axes' minor ticks. It's complicated.
-	x_maj_loc = ax.get_xticks()
-	y_maj_loc = ax.get_yticks()
-	x_min_mult = 0.2 * (x_maj_loc[1] - x_maj_loc[0])
-	y_min_mult = 0.2 * (y_maj_loc[1] - y_maj_loc[0])
-	xLocator = MultipleLocator(x_min_mult)  ## location of minor ticks on the x-axis
-	yLocator = MultipleLocator(y_min_mult)  ## location of minor ticks on the y-axis
-	ax.xaxis.set_minor_locator(xLocator)
-	ax.yaxis.set_minor_locator(yLocator)
+# 	x_maj_loc = ax.get_xticks()
+# 	y_maj_loc = ax.get_yticks()
+# 	x_min_mult = 0.2 * (x_maj_loc[1] - x_maj_loc[0])
+# 	y_min_mult = 0.2 * (y_maj_loc[1] - y_maj_loc[0])
+# 	xLocator = MultipleLocator(x_min_mult)  ## location of minor ticks on the x-axis
+# 	yLocator = MultipleLocator(y_min_mult)  ## location of minor ticks on the y-axis
+# 	ax.xaxis.set_minor_locator(xLocator)
+# 	ax.yaxis.set_minor_locator(yLocator)
 
 # 	ax.set_xscale('log')
 	ax.set_xlabel('Frequency (Hz)', fontproperties=font_prop)
