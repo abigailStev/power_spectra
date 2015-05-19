@@ -173,13 +173,13 @@ def normalize(power, meta_dict, mean_rate, noisy):
 
     Parameters
     ----------
-    power : np.array of doubles
+    power : np.array of floats
         Description.
 
     meta_dict : dict
         Description.
 
-    mean_rate : double
+    mean_rate : float
         Description.
 
     noisy : boolean
@@ -187,19 +187,19 @@ def normalize(power, meta_dict, mean_rate, noisy):
 
     Returns
     -------
-    freq : np.array of doubles
+    freq : np.array of floats
         Description.
 
-    power : np.array of doubles
+    power : np.array of floats
         Description.
 
-    leahy_power : np.array of doubles
+    leahy_power : np.array of floats
         Description.
 
-    fracrms_power : np.array of doubles
+    fracrms_power : np.array of floats
         Description.
 
-    fracrms_err : np.array of doubles
+    fracrms_err : np.array of floats
         Description.
 
     """
