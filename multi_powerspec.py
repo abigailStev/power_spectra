@@ -136,6 +136,9 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
     if not data_files:  ## If data_files is an empty list
         raise Exception("ERROR: No files in the eventlist list.")
 
+    # adjust_segs = [494, -187, -217, 150, -305, -58, 420, 123, -691] ## for 5.16269 Hz
+    adjust_segs = [932, 216, 184, 570, 93, 346, 860, 533, -324]
+
     ###################
     ## Initializations
     ###################
@@ -151,8 +154,7 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
 
     meta_dict = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds, \
                  'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins, \
-                 'detchans': 64}
-    print meta_dict['dt']
+                 'detchans': 64, 'adjust_seg': 0}
 
     print "DT = %.15f seconds" % meta_dict['dt']
     print "N_bins = %d" % meta_dict['n_bins']
@@ -161,9 +163,9 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
     ############################
     ## THE BIG LOOP STARTS HERE
     ############################
-
+    i = 0
     for in_file in data_files:
-
+        meta_dict['adjust_seg'] = adjust_segs[i]
         power_sum, sum_rate_whole, num_seg = \
             psd.read_and_use_segments(in_file, meta_dict, test)
         
@@ -172,6 +174,7 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
         total_power_sum += power_sum
         sum_rate_total += sum_rate_whole
         total_seg += num_seg
+        i += 1
 #         print "Sum_rate_total / total_seg = ", sum_rate_total / \
 #         	float(total_seg)
     
