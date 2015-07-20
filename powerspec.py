@@ -163,6 +163,148 @@ def fits_out(out_file, in_file, meta_dict, mean_rate_whole, freq, \
     thdulist = fits.HDUList([prihdu, tbhdu])
     thdulist.writeto(out_file)
 
+################################################################################
+def raw_to_absrms(power, mean_rate, n_bins, dt, noisy):
+    """
+    Normalizes the power spectrum to absolute rms^2 normalization.
+
+    Parameters
+    ----------
+    power : np.array of floats
+        The raw power at each Fourier frequency.
+
+    mean_rate : float
+        The mean count rate for the light curve, in cts/s.
+
+    n_bins : int
+        Number of bins per segment of light curve.
+
+    dt : float
+        Timestep between bins in n_bins, in seconds.
+
+    noisy : boolean
+        True if there is Poisson noise in the power spectrum (i.e., from real
+        data), False if there is no noise in the power spectrum (i.e.,
+        simulations without Poisson noise).
+
+    Returns
+    -------
+    np.array of floats
+        The noise-subtracted power spectrum in absolute rms^2 units.
+
+    """
+    if noisy:
+        noise = 2.0 * mean_rate *0.985
+    else:
+        noise = 0.0
+
+    return power * (2.0 * dt / float(n_bins)) - noise
+
+
+################################################################################
+def raw_to_fracrms(power, mean_rate, n_bins, dt, noisy):
+    """
+    Normalizes the power spectrum to fractional rms^2 normalization.
+
+    Parameters
+    ----------
+    power : np.array of floats
+        The raw power at each Fourier frequency.
+
+    mean_rate : float
+        The mean count rate for the light curve, in cts/s.
+
+    n_bins : int
+        Number of bins per segment of light curve.
+
+    dt : float
+        Timestep between bins in n_bins, in seconds.
+
+    noisy : boolean
+        True if there is Poisson noise in the power spectrum (i.e., from real
+        data), False if there is no noise in the power spectrum (i.e.,
+        simulations without Poisson noise).
+
+    Returns
+    -------
+    np.array of floats
+        The noise-subtracted power spectrum in fractional rms^2 units.
+
+    """
+    if noisy:
+        noise = 2.0 / mean_rate
+    else:
+        noise = 0.0
+
+    return power * (2.0 * dt / float(n_bins) / (mean_rate ** 2)) - noise
+
+
+################################################################################
+def raw_to_leahy(power, mean_rate, n_bins, dt, noisy):
+    """
+    Normalizes the power spectrum to Leahy normalization.
+
+    Parameters
+    ----------
+    power : np.array of floats
+        The raw power at each Fourier frequency.
+
+    mean_rate : float
+        The mean count rate for the light curve, in cts/s.
+
+    n_bins : int
+        Number of bins per segment of light curve.
+
+    dt : float
+        Timestep between bins in n_bins, in seconds.
+
+    noisy : boolean
+        True if there is Poisson noise in the power spectrum (i.e., from real
+        data), False if there is no noise in the power spectrum (i.e.,
+        simulations without Poisson noise).
+
+    Returns
+    -------
+    np.array of floats
+        The noise-subtracted power spectrum in Leahy units.
+
+    """
+    if noisy:
+        noise = 2.0
+    else:
+        noise = 0.0
+
+    return power * (2.0 * dt / float(n_bins) / mean_rate) - noise
+
+
+################################################################################
+def var_and_rms(power, df):
+    """
+    Computes the variance and RMS (root mean square) of a power spectrum.
+    Assumes the negative-frequency powers have been removed.
+
+    Parameters
+    ----------
+    power : np.array of floats
+        The raw power at each of the *positive* Fourier frequencies.
+
+    df : float
+        The step size between Fourier frequencies.
+
+    Returns
+    -------
+
+    float
+        The variance of the power spectrum.
+    float
+        The RMS of the power spectrum.
+
+    """
+    variance = np.sum(power * df)
+    rms = np.sqrt(variance)
+
+    return variance, rms
+
 
 ################################################################################
 def normalize(power, meta_dict, mean_rate, noisy):
@@ -371,11 +513,38 @@ def extracted_in(in_file, meta_dict, print_iterator, test):
 ################################################################################
 def fits_in(in_file, meta_dict, print_iterator, test):
     """
-            fits_in
-
     Opens the .fits GTI'd event list, reads the count rate for a segment,
     populates the light curve, calls 'make_ps' to create a power spectrum, adds
-    power spectra over all segments.
+    power spectra over all segments (average taken later).
+
+    I take the approach: start time <= segment < end_time, to avoid double-
+    counting and/or skipping events.
+
+    Parameters
+    ----------
+    in_file : string
+        The full path of the FITS data file being analyzed.
+
+    meta_dict : dictionary
+        Control parameters for the data analysis.
+
+    print_iterator : int
+
+
+    test : boolean
+        True if only running one segment of data for testing, False if analyzing
+        the whole data file. Default=False
+
+    Returns
+    -------
+    np.array of floats
+        The sum of the power spectra across the segments.
+
+    float
+        The count rate of the light curve.
+
+    int
+        Number of segments in this data file.
 
     """
 
@@ -411,31 +580,30 @@ def fits_in(in_file, meta_dict, print_iterator, test):
 # 	print np.shape(data)
 
     all_time = np.asarray(data.field('TIME'), dtype=np.float64)
-# 	all_energy = np.asarray(data.field('CHANNEL'), dtype=np.float64)
 
     ################################
     ## Looping through the segments
     ################################
 
-    while end_time <= final_time:
+    while (end_time + (meta_dict['adjust_seg'] * meta_dict['dt'])) <= final_time:
+
+        ## Adjusting segment length to artificially line up the QPOs
+        end_time += (meta_dict['adjust_seg'] * meta_dict['dt'])
 
         time = all_time[np.where(all_time < end_time)]
-# 		energy = all_energy[np.where(all_time < end_time)]
-
         for_next_iteration = np.where(all_time >= end_time)
         all_time = all_time[for_next_iteration]
-# 		all_energy = all_energy[for_next_iteration]
 
         if len(time) > 0:
             num_seg += 1
             rate_1d = tools.make_1Dlightcurve(time, meta_dict['n_bins'], \
-                meta_dict['dt'], start_time)
+                    start_time, end_time)
             lightcurve = np.concatenate((lightcurve, rate_1d))
 
             power_segment, mean_rate_segment = make_ps(rate_1d)
             assert int(len(power_segment)) == meta_dict['n_bins'], "ERROR: "\
-                "Something went wrong in make_ps. Length of power spectrum "\
-                "segment  != n_bins."
+                    "Something went wrong in make_ps. Length of power spectrum"\
+                    " segment  != n_bins."
             power_sum += power_segment
             sum_rate_whole += mean_rate_segment
 
@@ -445,7 +613,6 @@ def fits_in(in_file, meta_dict, print_iterator, test):
 
             ## Clearing variables from memory
             time = None
-# 			energy = None
             power_segment = None
             mean_rate_segment = None
             rate_1d = None
@@ -453,14 +620,13 @@ def fits_in(in_file, meta_dict, print_iterator, test):
             if test and (num_seg == 1):  # Testing
                 np.savetxt('tmp_lightcurve.dat', lightcurve, fmt='%d')
                 break
-            start_time += meta_dict['num_seconds']
+            start_time = end_time
             end_time += meta_dict['num_seconds']
 
         elif len(time) == 0:
             print "No counts in this segment."
             start_time = all_time[0]
             end_time = start_time + meta_dict['num_seconds']
-        ## End of 'if there are counts in this segment'
 
     return power_sum, sum_rate_whole, num_seg
 
@@ -500,7 +666,7 @@ def dat_in(in_file, meta_dict, print_iterator, test):
 
     end_time = start_time + meta_dict['num_seconds']
     assert end_time > start_time, "ERROR: End time must come after start time "\
-        "of the segment."
+            "of the segment."
 
     ## Open the file and read in the events into segments
     with open(in_file, 'r') as f:
@@ -527,7 +693,8 @@ def dat_in(in_file, meta_dict, print_iterator, test):
                     if len(time) > 0:
                         num_seg += 1
                         rate_2d, rate_1d = tools.make_lightcurve(time, energy,
-                            meta_dict['n_bins'], meta_dict['dt'], start_time)
+                                meta_dict['n_bins'], meta_dict['dt'], \
+                                start_time)
                         lightcurve = np.concatenate((lightcurve, rate_1d))
 
                         power_segment, mean_rate_segment = make_ps(rate_1d)
@@ -559,7 +726,6 @@ def dat_in(in_file, meta_dict, print_iterator, test):
                     elif len(time) == 0:
                         start_time = next_time
                         end_time = start_time + meta_dict['num_seconds']
-
     return power_sum, sum_rate_whole, num_seg
 
 
@@ -614,7 +780,7 @@ def read_and_use_segments(in_file, meta_dict, test):
 
 
 ################################################################################
-def main(in_file, out_file, num_seconds, dt_mult, test):
+def main(in_file, out_file, num_seconds, dt_mult, test, adjust_seg):
     """
             main
 
@@ -644,12 +810,12 @@ def main(in_file, out_file, num_seconds, dt_mult, test):
 
     meta_dict = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds, \
                  'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins, \
-                 'detchans': 64}
+                 'detchans': 64, 'adjust_seg': adjust_seg}
 
     print "\nDT = %f seconds" % meta_dict['dt']
     print "N_bins = %d" % meta_dict['n_bins']
     print "Nyquist freq =", meta_dict['nyquist']
-
+    print "Adjust_seg =", meta_dict['adjust_seg']
     ############################################################################
     ## Read in segments of a light curve or event list and make a power spectrum
     ############################################################################
@@ -722,16 +888,21 @@ if __name__ == "__main__":
         " segment. Must be a power of 2, positive, integer. [1]")
 
     parser.add_argument('-m', '--dt_mult', type=tools.type_power_of_two, \
-        default=1, dest='dt_mult', help="Multiple of dt (dt is from data file)"\
-        " for timestep between bins. Must be a power of 2, positive, integer. "\
-        "[1]")
+            default=1, dest='dt_mult', help="Multiple of dt (dt is from data "\
+            "file) for timestep between bins. Must be a power of 2, positive, "\
+            "integer. [1]")
 
 # 	parser.add_argument('--test', action='store_true', dest='test', help="If "\
 #       "present, only does a short test run.")
 
     parser.add_argument('-t', '--test', type=int, default=0, choices={0,1}, \
-        dest='test', help="Int flag: 0 if computing all segments, 1 if only "\
-        "computing one segment for testing. [0]")
+            dest='test', help="Int flag: 0 if computing all segments, 1 if "\
+            "only computing one segment for testing. [0]")
+
+    parser.add_argument('-a', type=int, default=0, \
+            dest='adjust_seg', help="Integer multiple of dt to add to length "\
+            "of each segment, to help line up QPO frequencies for averaging "\
+            "without smearing. [0]")
 
     args = parser.parse_args()
 
@@ -739,6 +910,7 @@ if __name__ == "__main__":
     if args.test == 1:
         test = True
 
-    main(args.infile, args.outfile, args.num_seconds, args.dt_mult, test)
+    main(args.infile, args.outfile, args.num_seconds, args.dt_mult, test, \
+            args.adjust_seg)
 
 ################################################################################
