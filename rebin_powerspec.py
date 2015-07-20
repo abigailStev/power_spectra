@@ -177,7 +177,7 @@ def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
     ax.set_yscale('log')
 # 	ax.set_xlim(rb_freq[1],np.max(rb_freq))
     ax.set_xlim(rb_freq[1], 1e2)
-    ax.set_ylim(1e-4, 1)
+    ax.set_ylim(1e-5, 1e-1)
 # 	ax.set_xlabel(r'$\nu$ [Hz]', fontproperties=font_prop)
 # 	ax.set_ylabel(r'$\nu$ $\cdot$ P($\nu$) [Hz rms$^2$]', \
 # 		fontproperties=font_prop)
@@ -188,7 +188,7 @@ def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
         labelbottom=True, labeltop=False)
     ax.tick_params(axis='y', labelsize=16, left=True, right=True, \
         labelleft=True, labelright=False)
-    ax.set_title(prefix, fontproperties=font_prop)
+    # ax.set_title(prefix, fontproperties=font_prop)
 
     fig.set_tight_layout(True)
 # 	plt.savefig(plot_file, dpi=200)
