@@ -4,6 +4,8 @@ Creates a power spectrum (psd, power spectral density) of X-ray timing data.
 Intended to be used with event-mode RXTE data.
 Note that 'tools.py' is in the repo 'whizzy_scripts'.
 
+This code is licensed under the MIT license. See LICENSE.md for details.
+
 ## Contents
 
 ### fit_qpo.py
@@ -33,4 +35,4 @@ noise, and converts back to a power spectrum. Makes many plots. Used for testing
 and learning.
 
 
-##### Disclaimer: This code comes with no legal guarantees.
+ [![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/) 
