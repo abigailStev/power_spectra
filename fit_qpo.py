@@ -7,7 +7,7 @@ import argparse
 import subprocess
 import os.path
 
-__author__ = "Abigail Stevens"
+__author__ = "Abigail Stevens <A.L.Stevens at uva.nl>"
 
 """
 fit_qpo.py
@@ -16,7 +16,7 @@ Fits a QPO power spectrum (f*P(f)) with a power law and either a Gaussian or a
 Lorentzian. Not intended to be robust, just to give an idea of how to quantify
 the QPO in the power spectrum.
 
-Written by Abigail Stevens, A.L.Stevens at uva.nl, 2015
+2015
 
 """
 
@@ -83,12 +83,12 @@ def make_plots(freq, npn_bg_corr, best_qpo, best_pl, best_resid, npn_err):
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(10,10))
 
     ax1.plot(freq, npn_bg_corr, 'wo')
-    ax1.plot(freq, best_qpo,'r-', lw=2)
-    ax1.plot(freq, best_pl, 'b-', lw=2)
+    ax1.plot(freq, best_qpo,'r--', lw=2)
+    # ax1.plot(freq, best_pl, 'b-', lw=2)
     ax1.set_xscale('log')
     ax1.set_yscale('log')
-    ax1.set_xlim(np.min(freq), np.max(freq))
-    ax1.set_ylim(1e-5,1e-1)
+    ax1.set_xlim(np.min(freq), 100)
+    ax1.set_ylim(1e-5, 1e-1)
 # 	ax1.set_ylabel(r'Power $\times$ frequency (frac. rms$^{2}$ $\times$ Hz)', \
 # 		fontsize=18)
     ax1.set_ylabel(r'Power $\times$ frequency', fontsize=18)
@@ -97,7 +97,7 @@ def make_plots(freq, npn_bg_corr, best_qpo, best_pl, best_resid, npn_err):
         elinewidth=2, markersize=2, marker='.')
     ax2.hlines(0, np.min(freq), np.max(freq), linestyle='dashed', lw=2)
     ax2.set_xscale('log')
-    ax2.set_xlim(np.min(freq), np.max(freq))
+    ax2.set_xlim(np.min(freq), 100)
     ax2.set_ylim(-0.003, 0.0025)
     ax2.set_xlabel('Frequency (Hz)', fontsize=18)
     ax2.set_ylabel(r'f $\cdot$ P(f) Residuals', fontsize=18)
@@ -167,6 +167,7 @@ def get_fit(qpo_mod, freq, npn, npn_err):
 
     ## Get the best parameters from the fit
     best_fit = pbest[0]
+    print best_fit
     return best_fit
 
 
@@ -217,7 +218,7 @@ def main(in_file, qpo_mod, prefix):
     else:
         print "\nBest fit: Gaussian + Power law"
         print "\tMean:", best_fit[0]
-        # print "\tStd dev:", best_fit[1]
+        print "\tStd dev:", best_fit[1]
         fwhm = 2.0 * np.sqrt(2.0 * np.log(2.0)) * best_fit[1]
         ## Fit Gaussian to data
         best_qpo = gaussian(freq, best_fit)
