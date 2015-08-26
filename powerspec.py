@@ -139,6 +139,7 @@ def fits_out(out_file, in_file, meta_dict, mean_rate_whole, freq, \
         "seconds, of light curve")
     prihdr.set('DETCHANS', meta_dict['detchans'], "Number of detector energy "\
         "channels")
+    prihdr.set('RMS', meta_dict['rms'], "Fractional rms of noise-sub PSD.")
     prihdr.set('MEANRATE', mean_rate_whole, "counts/second")
     prihdr.set('NYQUIST', meta_dict['nyquist'], "Hz")
     prihdu = fits.PrimaryHDU(header=prihdr)
@@ -344,6 +345,9 @@ def normalize(power, meta_dict, mean_rate, noisy):
     fracrms_err : np.array of floats
         Description.
 
+    rms : float
+        The fractional RMS of the noise-subtracted power spectrum.
+
     """
 
     ## Computing the FFT sample frequencies (in Hz)
@@ -358,8 +362,7 @@ def normalize(power, meta_dict, mean_rate, noisy):
     power = power[0:nyq_index + 1]
 
     ## Computing the error on the mean power
-    err_power = power / np.sqrt(float(meta_dict['num_seg']) * \
-                float(meta_dict['n_bins']))
+    err_power = power / np.sqrt(float(meta_dict['num_seg']))
 
     ## Absolute rms^2 normalization
     absrms_power = 2.0 * power * meta_dict['dt'] / float(meta_dict['n_bins'])
@@ -414,7 +417,7 @@ def normalize(power, meta_dict, mean_rate, noisy):
 
 # 	print "Mean power:", np.mean(fracrms_power[np.where(freq >= 100)])
 
-    return freq, power, leahy_power, fracrms_power, fracrms_err
+    return freq, power, leahy_power, fracrms_power, fracrms_err, rms_total
 
 
 ################################################################################
@@ -571,13 +574,13 @@ def fits_in(in_file, meta_dict, print_iterator, test):
 # 	PCU2_mask = data.field('PCUID') == 2
 # 	data = data[PCU2_mask]
 
-    ## Filter data based on energy channel
-# 	print np.shape(data)
-# 	lower_bound = data.field('CHANNEL') >= 0
-# 	data = data[lower_bound]
-# 	upper_bound = data.field('CHANNEL') <= 27
-# 	data = data[upper_bound]
-# 	print np.shape(data)
+    ## Filter data based on energy channel (event mode binned energy channel)
+    # print np.shape(data)
+    # lower_bound = data.field('CHANNEL') >= 14
+    # data = data[lower_bound]
+    # upper_bound = data.field('CHANNEL') <= 26
+    # data = data[upper_bound]
+    # print np.shape(data)
 
     all_time = np.asarray(data.field('TIME'), dtype=np.float64)
 
@@ -843,10 +846,12 @@ def main(in_file, out_file, num_seconds, dt_mult, test, adjust_seg):
     ## Normalize the power spectrum
     ################################
 
-    freq, power, leahy_power, fracrms_power, fracrms_err = normalize(power, \
+    freq, power, leahy_power, fracrms_power, fracrms_err, rms = normalize(power,
         meta_dict, mean_rate_whole, True)
         ## True = noisy light curve (a.k.a. using real data, or simulated light
         ## curve is given a non-zero noise level)
+
+    meta_dict['rms'] = rms
 
     ###################################
     ## Output, based on file extension
