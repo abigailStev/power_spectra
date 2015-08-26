@@ -1,2 +1,10 @@
 *.[oa]
 *~
+*.pyc
+*.txt
+*.png
+*.dat
+*.eps
+.DS_Store
+.idea/
+OLD/
