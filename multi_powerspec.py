@@ -6,6 +6,7 @@ from astropy.io import fits
 from datetime import datetime
 import os.path
 import subprocess
+from distutils.util import strtobool
 import powerspec as psd  # https://github.com/abigailStev/power_spectra
 import tools  # https://github.com/abigailStev/whizzy_scripts
 
@@ -60,8 +61,8 @@ def dat_output(out_file, data_file_list, meta_dict, total_exposure, \
 
 
 ################################################################################
-def fits_output(out_file, data_file_list, meta_dict, total_exposure, \
-    mean_rate_total, freq, fracrms_power, fracrms_err):
+def fits_output(out_file, data_file_list, meta_dict, freq, fracrms_power, \
+        fracrms_err):
     """
                 fits_output
 
@@ -81,11 +82,11 @@ def fits_output(out_file, data_file_list, meta_dict, total_exposure, \
     prihdr.set('SECONDS', meta_dict['num_seconds'], "Seconds per segment")
     prihdr.set('SEGMENTS', meta_dict['num_seg'], "Segments in the whole light "\
         "curve")
-    prihdr.set('EXPOSURE', total_exposure, "seconds, of whole light "\
-        "curve")
+    prihdr.set('EXPOSURE', meta_dict['exposure'], "seconds of data used")
     prihdr.set('DETCHANS', meta_dict['detchans'], "Number of detector energy "\
         "channels")
-    prihdr.set('MEANRATE', mean_rate_total, "counts/second")
+    prihdr.set('RMS', meta_dict['rms'], "Fractional rms of noise-sub PSD.")
+    prihdr.set('MEANRATE', meta_dict['mean_rate'], "counts/second")
     prihdr.set('NYQUIST', meta_dict['nyquist'], "Hz")
     prihdu = fits.PrimaryHDU(header=prihdr)
 
@@ -111,7 +112,7 @@ def fits_output(out_file, data_file_list, meta_dict, total_exposure, \
 
 
 ################################################################################
-def main(infile_list, out_file, num_seconds, dt_mult, test):
+def main(infile_list, out_file, num_seconds, dt_mult, test, adjust):
     """
             main
 
@@ -137,7 +138,7 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
         raise Exception("ERROR: No files in the eventlist list.")
 
     # adjust_segs = [494, -187, -217, 150, -305, -58, 420, 123, -691] ## for 5.16269 Hz
-    adjust_segs = [932, 216, 184, 570, 93, 346, 860, 533, -324]
+    adjust_segments = [932, 216, 184, 570, 93, 346, 860, 533, -324]
 
     ###################
     ## Initializations
@@ -151,70 +152,111 @@ def main(infile_list, out_file, num_seconds, dt_mult, test):
     total_power_sum = np.zeros(n_bins)
     sum_rate_total = 0
     total_seg = 0
+    total_exposure = 0
+    dt_total = np.array([])
+    df_total = np.array([])
+    ellsee_total = psd.Lightcurve()
 
     meta_dict = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds, \
                  'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins, \
-                 'detchans': 64, 'adjust_seg': 0}
+                 'detchans': 64, 'adjust_seg': 0, 'exposure': 0}
 
     print "DT = %.15f seconds" % meta_dict['dt']
     print "N_bins = %d" % meta_dict['n_bins']
     print "Nyquist freq = %f" % meta_dict['nyquist']
+
+    ellsee_total.power_array = np.zeros((meta_dict['n_bins'], 1), dtype=np.float64)
+    ellsee_total.mean_rate_array = 0
 
     ############################
     ## THE BIG LOOP STARTS HERE
     ############################
     i = 0
     for in_file in data_files:
-        meta_dict['adjust_seg'] = adjust_segs[i]
-        power_sum, sum_rate_whole, num_seg = \
-            psd.read_and_use_segments(in_file, meta_dict, test)
+        if adjust:
+            meta_dict['adjust_seg'] = adjust_segments[i]
+
+        ellsee_whole, power_sum, sum_rate_whole, num_seg, exposure, dt_whole, df_whole = \
+                psd.read_and_use_segments(in_file, meta_dict, test)
         
         print "Segments for this file: %d\n" % num_seg
         
         total_power_sum += power_sum
         sum_rate_total += sum_rate_whole
         total_seg += num_seg
+        total_exposure += exposure
+        dt_total = np.append(dt_total, dt_whole)
+        df_total = np.append(df_total, df_whole)
+
+        ellsee_total.power_array = np.hstack((ellsee_total.power_array, \
+                    ellsee_whole.power_array))
+        ellsee_total.mean_rate_array = np.append(ellsee_total.mean_rate_array, \
+                    ellsee_whole.mean_rate_array)
+
         i += 1
 #         print "Sum_rate_total / total_seg = ", sum_rate_total / \
 #         	float(total_seg)
     
     ## End of for-loop
     print " "
-    meta_dict['num_seg'] = total_seg
 
-    total_exposure = meta_dict['num_seg'] * meta_dict['num_seconds']
-    print "Total exposure time =", total_exposure
+    ellsee_total.power_array = ellsee_total.power_array[:,1:]
+    ellsee_total.mean_rate_array = ellsee_total.mean_rate_array[1:]
 
-    ## Getting averages. Total means over all segments of all data files.
-    power = total_power_sum / meta_dict['num_seg']
-    mean_rate_total = sum_rate_total / meta_dict['num_seg']
+    mask = np.array([strtobool(line.strip()) for line in open("mask.txt")], dtype=np.bool)
+    # print mask
+    # print type(mask)
+    # print np.count_nonzero(mask)
+    # meta_dict['num_seg'] = total_seg
+
+    # print np.shape(ellsee_total.power_array)
+    # print np.shape(ellsee_total.mean_rate_array)
+
+    ellsee_total.power_array = ellsee_total.power_array[:,~mask]
+    ellsee_total.mean_rate_array = ellsee_total.mean_rate_array[~mask]
+
+    meta_dict['num_seg'] = total_seg - np.count_nonzero(mask)
+    # print np.count_nonzero(~mask)
+    for element in dt_total[mask]:
+        total_exposure -= element * meta_dict['n_bins']
+    meta_dict['exposure'] = total_exposure
+    meta_dict['dt'] = np.mean(dt_total[~mask])
+    meta_dict['df'] = np.mean(df_total[~mask])
+
+    # print meta_dict['dt']
+    # print meta_dict['df']
+
+    print "Total exposure time =", meta_dict['exposure']
+
+    ## Getting averages
+    power = psd.seg_average(ellsee_total.power_array)
+    mean_rate = psd.seg_average(ellsee_total.mean_rate_array)
+    meta_dict['mean_rate'] = mean_rate
     print "Total segments =", meta_dict['num_seg']
-    print "Mean rate total =", mean_rate_total
-    
+    print "Mean rate total =", mean_rate
+
     ######################################################
     ## Normalizing the power spectrum and computing error
     ######################################################
 
-    total_variance = np.sum(power * df)
+    total_variance = np.sum(power * meta_dict['df'])
     print "Total variance:", total_variance, "(unnorm)"
     rms_total = np.sqrt(total_variance)
     print "Total RMS:", rms_total, "(unnorm)"
     
-    freq, power, leahy_power, fracrms_power, fracrms_err = \
-        psd.normalize(power, meta_dict, mean_rate_total, True)
-    
-    #########################
-    ## Output, .dat or .fits
-    #########################
-    
-    if out_file[-4:].lower() == "fits":
-        fits_output(out_file, infile_list, meta_dict, total_exposure, \
-            mean_rate_total, freq, fracrms_power, fracrms_err)
-    elif out_file[-3:].lower() == "dat":	
-        dat_output(out_file, infile_list, meta_dict, total_exposure, \
-            mean_rate_total, freq, fracrms_power, fracrms_err)
-    else:
-        raise Exception("ERROR: Output file must be of type .dat or .fits.")
+    freq, power, leahy_power, fracrms_power, fracrms_err, rms = \
+        psd.normalize(power, meta_dict, mean_rate, True)
+
+    meta_dict['rms'] = rms
+    meta_dict['nyquist'] = freq[n_bins/2]
+    print meta_dict['nyquist']
+
+    ##########
+    ## Output
+    ##########
+
+    fits_output(out_file, infile_list, meta_dict, freq, fracrms_power, \
+            fracrms_err)
 
 
 ################################################################################
@@ -249,12 +291,17 @@ if __name__ == "__main__":
         dest='test', help="Int flag: 0 if computing all segments, 1 if "\
         "computing only one segment for testing. [0]")
 
+    parser.add_argument('-a', '--adjust', default=False, action='store_true',
+            dest='adjust', help="If present, artificially adjusts the "\
+            "frequency of the QPO by changing the segment length. [False]")
+
     args = parser.parse_args()
 
     test = False
     if args.test == 1: 
         test = True
 
-    main(args.infile_list, args.outfile, args.num_seconds, args.dt_mult, test)
+    main(args.infile_list, args.outfile, args.num_seconds, args.dt_mult, test, \
+            args.adjust)
 
 ################################################################################

@@ -22,6 +22,23 @@ Abigail Stevens, A.L.Stevens at uva.nl, 2013-2015
 
 """
 
+
+class Lightcurve(object):
+    def __init__(self):
+        self.mean_rate = 0
+        self.mean_rate_array = 0
+        self.power = 0
+        self.power_array = 0
+        self.pos_power = 0
+
+class NormPSD(object):
+    def __init__(self):
+        self.power = 0
+        self.noise = 0
+        self.variance = 0
+        self.rms = 0
+
+
 ################################################################################
 def dat_out(out_file, in_file, meta_dict, mean_rate_whole, freq, fracrms_power,\
     fracrms_err, leahy_power):
@@ -70,7 +87,7 @@ def dat_out(out_file, in_file, meta_dict, mean_rate_whole, freq, fracrms_power,\
         out.write("\n# Number of segments per light curve = %d" % \
                   meta_dict['num_seg'])
         out.write("\n# Exposure time = %d seconds" % \
-                  (meta_dict['num_seg'] * meta_dict['num_seconds']))
+                  (meta_dict['exposure']))
         out.write("\n# Mean count rate = %.8f" % mean_rate_whole)
         out.write("\n# Nyquist frequency = %.4f" % meta_dict['nyquist'])
         out.write("\n# ")
@@ -84,7 +101,6 @@ def dat_out(out_file, in_file, meta_dict, mean_rate_whole, freq, fracrms_power,\
             if freq[k] >= 0:
                 out.write("\n{0:.8f}\t{1:.8f}\t{2:.8f}\t{3:.8f}".format(freq[k],
                     fracrms_power[k], fracrms_err[k], leahy_power[k]))
-
 
 
 ################################################################################
@@ -135,8 +151,7 @@ def fits_out(out_file, in_file, meta_dict, mean_rate_whole, freq, \
     prihdr.set('N_BINS', meta_dict['n_bins'], "time bins per segment")
     prihdr.set('SEGMENTS', meta_dict['num_seg'], "segments in the whole light "\
         "curve")
-    prihdr.set('EXPOSURE', meta_dict['num_seg'] * meta_dict['num_seconds'], \
-        "seconds, of light curve")
+    prihdr.set('EXPOSURE', meta_dict['exposure'], "seconds of data used")
     prihdr.set('DETCHANS', meta_dict['detchans'], "Number of detector energy "\
         "channels")
     prihdr.set('RMS', meta_dict['rms'], "Fractional rms of noise-sub PSD.")
@@ -563,8 +578,14 @@ def fits_in(in_file, meta_dict, print_iterator, test):
 
     sum_rate_whole = 0
     power_sum = np.zeros(meta_dict['n_bins'], dtype=np.float64)
+    ellsee = Lightcurve()
+    ellsee.power_array = np.zeros((meta_dict['n_bins'], 1), dtype=np.float64)
+    ellsee.mean_rate_array = 0
     num_seg = 0
-    lightcurve = np.asarray([])
+    lightcurve = np.array([])
+    exposure = 0
+    dt_whole = np.array([])
+    df_whole = np.array([])
 
     start_time = data.field('TIME')[0]
     final_time = data.field('TIME')[-1]
@@ -575,12 +596,12 @@ def fits_in(in_file, meta_dict, print_iterator, test):
 # 	data = data[PCU2_mask]
 
     ## Filter data based on energy channel (event mode binned energy channel)
-    # print np.shape(data)
+    # # print np.shape(data)
     # lower_bound = data.field('CHANNEL') >= 14
     # data = data[lower_bound]
     # upper_bound = data.field('CHANNEL') <= 26
     # data = data[upper_bound]
-    # print np.shape(data)
+    # # print np.shape(data)
 
     all_time = np.asarray(data.field('TIME'), dtype=np.float64)
 
@@ -607,8 +628,18 @@ def fits_in(in_file, meta_dict, print_iterator, test):
             assert int(len(power_segment)) == meta_dict['n_bins'], "ERROR: "\
                     "Something went wrong in make_ps. Length of power spectrum"\
                     " segment  != n_bins."
+            ellsee.power_array = np.hstack((ellsee.power_array, \
+                    np.reshape(power_segment, (meta_dict['n_bins'],1)) ))
+            # print np.shape(ellsee.power_array)
+            ellsee.mean_rate_array = np.append(ellsee.mean_rate_array, \
+                    mean_rate_segment)
+
             power_sum += power_segment
             sum_rate_whole += mean_rate_segment
+            exposure += end_time - start_time
+            dt_seg = (end_time - start_time) / float(meta_dict['n_bins'])
+            dt_whole = np.append(dt_whole, dt_seg)
+            df_whole = np.append(df_whole, 1.0 / (meta_dict['n_bins'] * dt_seg))
 
             ## Printing out which segment we're on every x segments
             if num_seg % print_iterator == 0:
@@ -631,7 +662,10 @@ def fits_in(in_file, meta_dict, print_iterator, test):
             start_time = all_time[0]
             end_time = start_time + meta_dict['num_seconds']
 
-    return power_sum, sum_rate_whole, num_seg
+    ellsee.power_array = ellsee.power_array[:,1:]
+    ellsee.mean_rate_array = ellsee.mean_rate_array[1:]
+
+    return ellsee, power_sum, sum_rate_whole, num_seg, exposure, dt_whole, df_whole
 
 
 ################################################################################
@@ -767,19 +801,24 @@ def read_and_use_segments(in_file, meta_dict, test):
     ## power spectrum can be taken, whereas data from lc was made in seextrct
     ## and so it's already populated as a light curve
     if (in_file[-5:].lower() == ".fits"):
-        power_sum, sum_rate_whole, num_seg = fits_in(in_file, meta_dict, \
-            print_iterator, test)
+        ellsee, power_sum, sum_rate_whole, num_seg, exposure, dt_whole, df_whole = \
+                fits_in(in_file, meta_dict, print_iterator, test)
     elif (in_file[-4:].lower() == ".dat"):
         power_sum, sum_rate_whole, num_seg = dat_in(in_file, meta_dict, \
-            print_iterator, test)
+                print_iterator, test)
     elif (in_file[-3:].lower() == ".lc"):
         power_sum, sum_rate_whole, num_seg = extracted_in(in_file, meta_dict,\
-            print_iterator, test)
+                print_iterator, test)
     else:
         raise Exception("ERROR: Input file type not recognized. Must be .dat, "\
-            ".fits, or .lc.")
+                ".fits, or .lc.")
 
-    return power_sum, sum_rate_whole, num_seg
+    return ellsee, power_sum, sum_rate_whole, num_seg, exposure, dt_whole, df_whole
+
+
+################################################################################
+def seg_average(array):
+    return np.mean(array, axis=-1)
 
 
 ################################################################################
@@ -823,11 +862,14 @@ def main(in_file, out_file, num_seconds, dt_mult, test, adjust_seg):
     ## Read in segments of a light curve or event list and make a power spectrum
     ############################################################################
 
-    power_sum, sum_rate_whole, num_seg = read_and_use_segments(in_file, \
-        meta_dict, test)
+    ellsee, power_sum, sum_rate_whole, num_seg, exposure, dt_whole, df_whole = \
+            read_and_use_segments(in_file, meta_dict, test)
     print " "
 
     meta_dict['num_seg'] = num_seg
+    meta_dict['exposure'] = exposure
+    meta_dict['dt'] = np.mean(dt_whole)
+    meta_dict['df'] = np.mean(df_whole)
 
     assert isinstance(meta_dict, object)
     print "\tTotal number of segments =", meta_dict['num_seg']
@@ -841,6 +883,10 @@ def main(in_file, out_file, num_seconds, dt_mult, test, adjust_seg):
         "length n_bins."
     mean_rate_whole = sum_rate_whole / float(meta_dict['num_seg'])
     print "Mean count rate over whole lightcurve =", mean_rate_whole
+
+    poww = seg_average(ellsee.power_array)
+    print poww[1:4]
+    print power[1:4]
 
     ################################
     ## Normalize the power spectrum
