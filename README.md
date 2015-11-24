@@ -33,11 +33,10 @@ a specific power spectrum, makes it into a light curve with or without Poisson
 noise, and converts back to a power spectrum. Makes many plots. Used for testing
 and learning.
 
-
  [![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/) 
  
 ## Authors and License
-* Abigail Stevens (UvA)
+* Abigail Stevens (UvA API)
 
 Pull requests are welcome!
 
