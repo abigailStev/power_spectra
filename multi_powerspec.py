@@ -85,7 +85,7 @@ def fits_output(out_file, data_file_list, meta_dict, freq, fracrms_power, \
     prihdr.set('EXPOSURE', meta_dict['exposure'], "seconds of data used")
     prihdr.set('DETCHANS', meta_dict['detchans'], "Number of detector energy "\
         "channels")
-    prihdr.set('RMS', meta_dict['rms'], "Fractional rms of noise-sub PSD.")
+    prihdr.set('RMS', str(meta_dict['rms']), "Fractional rms of noise-sub PSD.")
     prihdr.set('MEANRATE', meta_dict['mean_rate'], "counts/second")
     prihdr.set('NYQUIST', meta_dict['nyquist'], "Hz")
     prihdu = fits.PrimaryHDU(header=prihdr)
@@ -202,19 +202,22 @@ def main(infile_list, out_file, num_seconds, dt_mult, test, adjust):
 
     ellsee_total.power_array = ellsee_total.power_array[:,1:]
     ellsee_total.mean_rate_array = ellsee_total.mean_rate_array[1:]
+    meta_dict['num_seg'] = total_seg
 
-    mask = np.array([strtobool(line.strip()) for line in open("mask.txt")], dtype=np.bool)
+    ############################################################################
+    ## Applying the mask from ccf to get rid of segments with negative variance
+    ############################################################################
+
+    mask = np.array([strtobool(line.strip()) for line in open("mask.txt")], \
+            dtype=np.bool)
     # print mask
     # print type(mask)
     # print np.count_nonzero(mask)
-    # meta_dict['num_seg'] = total_seg
-
     # print np.shape(ellsee_total.power_array)
     # print np.shape(ellsee_total.mean_rate_array)
 
     ellsee_total.power_array = ellsee_total.power_array[:,~mask]
     ellsee_total.mean_rate_array = ellsee_total.mean_rate_array[~mask]
-
     meta_dict['num_seg'] = total_seg - np.count_nonzero(mask)
     # print np.count_nonzero(~mask)
     for element in dt_total[mask]:
@@ -228,7 +231,10 @@ def main(infile_list, out_file, num_seconds, dt_mult, test, adjust):
 
     print "Total exposure time =", meta_dict['exposure']
 
+    ####################
     ## Getting averages
+    ####################
+
     power = psd.seg_average(ellsee_total.power_array)
     mean_rate = psd.seg_average(ellsee_total.mean_rate_array)
     meta_dict['mean_rate'] = mean_rate
