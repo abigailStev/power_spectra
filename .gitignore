@@ -6,5 +6,7 @@
 *.dat
 *.eps
 .DS_Store
-.idea/
-OLD/
+.idea/*
+.ipynb_checkpoints/*
+OLD/*
+out_ps/*
