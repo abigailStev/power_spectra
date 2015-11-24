@@ -158,7 +158,7 @@ def geometric_rebinning(freq, power, err_power, rebin_const):
     return rb_freq, rb_power, rb_err, freq_min, freq_max
 
 def make_gaussfit(rb_freq):
-    p = [5.42089872,3.52722904e-01,5.23890568e-03,-1.45695001,2.07604091e-04]
+    p = [5.19554316,3.33440272e-01,5.55485390e-03,-1.04032202,5.39625529e-04]
     ## p[0] = mean value, p[1] = standard deviation, p[2] = scale factor
     exp_numerator = -(rb_freq - p[0])**2
     exp_denominator = 2 * p[1]**2
@@ -166,7 +166,7 @@ def make_gaussfit(rb_freq):
     return G
 
 def make_lorfit(rb_freq):
-    p = [5.41380109,6.60371620e-01,5.97192146e-03,-1.69885007,6.48641802e-05]
+    p = [5.18905778,6.32397183e-01,6.08392227e-03,-1.12134668,2.86458229e-04]
     ## p[0] = centroid frequency, p[1] = fwhm, p[2] = scale factor
     numerator = p[1] / (np.pi * 2.0)
     denominator = (rb_freq - p[0]) ** 2 + (1.0/2.0 * p[1]) ** 2
@@ -181,22 +181,22 @@ def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
     """
     print "Re-binned power spectrum: %s" % plot_file
 
-    font_prop = font_manager.FontProperties(size=18)
+    font_prop = font_manager.FontProperties(size=24)
 
     bf_gauss = make_gaussfit(rb_freq)
     bf_lor = make_lorfit(rb_freq)
 
-    fig, ax = plt.subplots(1,1, figsize=(10,7.5), tight_layout=True, dpi=300)
+    fig, ax = plt.subplots(1,1, figsize=(10,7.5), dpi=300)
     # ax.plot(rb_freq, vpv, lw=2, c='black')
-    ax.errorbar(rb_freq, vpv, yerr=err_vpv, lw=2, ls='-', c='black',
+    ax.errorbar(rb_freq, vpv, yerr=err_vpv, lw=3, ls='-', c='blue',
             elinewidth=2, capsize=2)
-    ax.plot(rb_freq, bf_gauss, lw=2, c='blue', ls='--')
+    # ax.plot(rb_freq, bf_gauss, lw=2, c='blue', ls='--')
     # ax.plot(rb_freq, bf_lor, lw=1, c='red', ls='-.')
     ax.set_xscale('log')
     ax.set_yscale('log')
-# 	ax.set_xlim(rb_freq[1],np.max(rb_freq))
-    ax.set_xlim(rb_freq[1], 1e2)
-    ax.set_ylim(1e-5, 1e-1)
+    ax.set_xlim(rb_freq[1],np.max(rb_freq))
+    # ax.set_xlim(rb_freq[1], 1e2)
+    # ax.set_ylim(4e-4, 1e-1)
     ax.xaxis.set_major_formatter(ScalarFormatter())
 # 	ax.set_xlabel(r'$\nu$ [Hz]', fontproperties=font_prop)
 # 	ax.set_ylabel(r'$\nu$ $\cdot$ P($\nu$) [Hz rms$^2$]', \
@@ -204,16 +204,16 @@ def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
     ax.set_xlabel('Frequency (Hz)', fontproperties=font_prop)
     ax.set_ylabel(r'Power$\times$ frequency (frac. rms$^{2}\times$ Hz)', \
         fontproperties=font_prop)
-    ax.tick_params(axis='x', labelsize=18, bottom=True, top=True, \
+    ax.tick_params(axis='x', labelsize=24, bottom=True, top=True, \
         labelbottom=True, labeltop=False)
-    ax.tick_params(axis='y', labelsize=18, left=True, right=True, \
+    ax.tick_params(axis='y', labelsize=24, left=True, right=True, \
         labelleft=True, labelright=False)
     # ax.set_title(prefix, fontproperties=font_prop)
 
     plt.savefig(plot_file)
 # 	plt.show()
     plt.close()
-    subprocess.call(['cp', plot_file, "/Users/abigailstevens/Dropbox/Research/CCF_paper1/"])
+    # subprocess.call(['cp', plot_file, "/Users/abigailstevens/Dropbox/Research/CCF_paper1/"])
 
 
 
