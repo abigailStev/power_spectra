@@ -37,7 +37,6 @@ header = fits_hdu[0].header	 ## Header is in ext 0
 data = fits_hdu[1].data  ## Data is in ext 1
 fits_hdu.close()
 
-
 if meta_dict['n_bins'] == 32768:
     print_iterator = int(10)
 elif meta_dict['n_bins'] < 32768:
@@ -48,6 +47,7 @@ elif meta_dict['n_bins'] >= 1048576:
     print_iterator = int(2)
 else:
     print_iterator = int(5)
+
 sum_rate_whole = 0
 power_sum = np.zeros(meta_dict['n_bins'], dtype=np.float64)
 num_seg = 0
@@ -57,20 +57,7 @@ start_time = data.field('TIME')[0]
 final_time = data.field('TIME')[-1]
 end_time = start_time + meta_dict['num_seconds']
 
-## Filter data based on pcu
-# 	PCU2_mask = data.field('PCUID') == 2
-# 	data = data[PCU2_mask]
-
-## Filter data based on energy channel
-# 	print np.shape(data)
-# 	lower_bound = data.field('CHANNEL') >= 0
-# 	data = data[lower_bound]
-# 	upper_bound = data.field('CHANNEL') <= 27
-# 	data = data[upper_bound]
-# 	print np.shape(data)
-
 all_time = np.asarray(data.field('TIME'), dtype=np.float64)
-# 	all_energy = np.asarray(data.field('CHANNEL'), dtype=np.float64)
 
 ################################
 ## Looping through the segments
@@ -79,11 +66,9 @@ all_time = np.asarray(data.field('TIME'), dtype=np.float64)
 while end_time <= final_time:
 
     time = all_time[np.where(all_time < end_time)]
-# 		energy = all_energy[np.where(all_time < end_time)]
 
     for_next_iteration = np.where(all_time >= end_time)
     all_time = all_time[for_next_iteration]
-# 		all_energy = all_energy[for_next_iteration]
 
     if len(time) > 0:
         num_seg += 1
