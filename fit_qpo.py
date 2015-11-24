@@ -10,8 +10,6 @@ import os.path
 __author__ = "Abigail Stevens <A.L.Stevens at uva.nl>"
 
 """
-fit_qpo.py
-
 Fits a QPO power spectrum (f*P(f)) with a power law and either a Gaussian or a
 Lorentzian. Not intended to be robust, just to give an idea of how to quantify
 the QPO in the power spectrum.
