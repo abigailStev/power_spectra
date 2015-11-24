@@ -485,27 +485,46 @@ def extracted_in(in_file, meta_dict, print_iterator, test):
     ## Initializations
     sum_rate_whole = 0
     power_sum = np.zeros(meta_dict['n_bins'], dtype=np.float64)
+    ellsee = Lightcurve()
+    ellsee.power_array = np.zeros((meta_dict['n_bins'], 1), dtype=np.float64)
+    ellsee.mean_rate_array = 0
     num_seg = 0
+    lightcurve = np.array([])
+    exposure = 0
+    dt_whole = np.array([])
+    df_whole = np.array([])
     i = 0  # start of bin index to make segment of data for inner for-loop
     j = meta_dict['n_bins']  # end of bin index to make segment of data for inner for-loop
 
     print data[1].field(0) - data[0].field(0)
-
-    assert meta_dict['dt'] == (data[1].field(0) - data[0].field(0)), "ERROR: "\
-        "dt must be the same resolution as the extracted FITS data."
+    # meta_dict['dt'] = 0.015625
+    # meta_dict['dt'] = 0.0078125
+    # assert meta_dict['dt'] == (data[1].field(0) - data[0].field(0)), "ERROR: "\
+    #     "dt must be the same resolution as the extracted FITS data."
 
     ## Loop through segments of the data
     while j <= len(data.field(1)):  ## while we haven't reached the end of the
                                     ## file
 
         num_seg += 1
-
+        start_time = data.field(0)[i]
+        end_time = data.field(0)[j-1]
         ## Extracts the second column of 'data' and assigns it to 'rate'.
         rate = data[i:j].field(1)
 
         power_segment, mean_rate_segment = make_ps(rate)
+        ellsee.power_array = np.hstack((ellsee.power_array, np.reshape(power_segment, (meta_dict['n_bins'],1)) ))
+        # print np.shape(ellsee.power_array)
+        ellsee.mean_rate_array = np.append(ellsee.mean_rate_array, \
+                mean_rate_segment)
+
         power_sum += power_segment
         sum_rate_whole += mean_rate_segment
+
+        exposure += end_time - start_time
+        dt_seg = (end_time - start_time) / float(meta_dict['n_bins'])
+        dt_whole = np.append(dt_whole, dt_seg)
+        df_whole = np.append(df_whole, 1.0 / (meta_dict['n_bins'] * dt_seg))
 
         if num_seg % print_iterator == 0:
             print "\t", num_seg
@@ -525,7 +544,7 @@ def extracted_in(in_file, meta_dict, print_iterator, test):
         ## function works) it's ok that we set i=j here for the next round.
         ## This will not cause double-counting rows or skipping rows.
 
-    return power_sum, sum_rate_whole, num_seg
+    return ellsee, power_sum, sum_rate_whole, num_seg, exposure, dt_whole, df_whole
 
 
 ################################################################################
@@ -807,8 +826,9 @@ def read_and_use_segments(in_file, meta_dict, test):
         power_sum, sum_rate_whole, num_seg = dat_in(in_file, meta_dict, \
                 print_iterator, test)
     elif (in_file[-3:].lower() == ".lc"):
-        power_sum, sum_rate_whole, num_seg = extracted_in(in_file, meta_dict,\
-                print_iterator, test)
+        ellsee, power_sum, sum_rate_whole, num_seg, exposure, dt_whole, \
+                df_whole = extracted_in(in_file, meta_dict, print_iterator, \
+                test)
     else:
         raise Exception("ERROR: Input file type not recognized. Must be .dat, "\
                 ".fits, or .lc.")
@@ -885,8 +905,8 @@ def main(in_file, out_file, num_seconds, dt_mult, test, adjust_seg):
     print "Mean count rate over whole lightcurve =", mean_rate_whole
 
     poww = seg_average(ellsee.power_array)
-    print poww[1:4]
-    print power[1:4]
+    # print poww[1:4]
+    # print power[1:4]
 
     ################################
     ## Normalize the power spectrum
@@ -935,16 +955,13 @@ if __name__ == "__main__":
         "file to write the frequency and power to.")
 
     parser.add_argument('-n', '--num_seconds', type=tools.type_power_of_two, \
-        default=1, dest='num_seconds', help="Number of seconds in each Fourier"\
-        " segment. Must be a power of 2, positive, integer. [1]")
+        default=64, dest='num_seconds', help="Number of seconds in each Fourier"\
+        " segment. Must be a power of 2, positive, integer. [64]")
 
     parser.add_argument('-m', '--dt_mult', type=tools.type_power_of_two, \
-            default=1, dest='dt_mult', help="Multiple of dt (dt is from data "\
+            default=64, dest='dt_mult', help="Multiple of dt (dt is from data "\
             "file) for timestep between bins. Must be a power of 2, positive, "\
-            "integer. [1]")
-
-# 	parser.add_argument('--test', action='store_true', dest='test', help="If "\
-#       "present, only does a short test run.")
+            "integer. [64]")
 
     parser.add_argument('-t', '--test', type=int, default=0, choices={0,1}, \
             dest='test', help="Int flag: 0 if computing all segments, 1 if "\
