@@ -5,24 +5,36 @@ from astropy.io import fits
 import matplotlib.font_manager as font_manager
 from matplotlib.ticker import MultipleLocator
 
-__author__ = "Abigail Stevens"
-__author_email__ = "A.L.Stevens at uva.nl"
-__year__ = "2013-2015"
-__description__ = "Linearly plots a power spectrum in the frequency domain."
+__author__ = "Abigail Stevens, A.L.Stevens at uva.nl"
 
 """
-		plot_powerspec.py
+Linearly plots a power spectrum in the frequency domain.
 
-Written in Python 2.7.
+2013-2015
 
 """
+
 ################################################################################
 def main(tab_file, plot_file, prefix):
 	"""
-			main
-	
 	Linearly plots a power spectrum in the frequency domain.
-	
+
+	Parameters
+	----------
+	tab_file : string
+        Full path of the FITS file with the Fourier frequency and power spectrum
+        in a table.
+
+	plot_file : string
+        Full path of the desired plot file name.
+
+	prefix : string
+        Identifying prefix of the data (object nickname or obsID).
+
+	Returns
+	-------
+	nothing
+
 	"""
 	##########################################
 	## Reading in power spectrum from a table
@@ -53,8 +65,9 @@ def main(tab_file, plot_file, prefix):
 	
 	print "Power spectrum: %s" % plot_file
 
-	fig, ax = plt.subplots(1,1)
-	ax.plot(freq, fracrms, linewidth=2)
+	fig, ax = plt.subplots(1,1, figsize=(12,9), tight_layout=True)
+
+	ax.plot(freq, fracrms, linewidth=2, c='black')
 # 	ax.errorbar(freq, fracrms, xerr=None, yerr=error)
 
 # 	ax.set_xlim(freq[1],np.max(freq))
@@ -74,13 +87,12 @@ def main(tab_file, plot_file, prefix):
 	ax.set_xlabel('Frequency (Hz)', fontproperties=font_prop)
 	ax.set_ylabel(r'Power (frac. rms$^{2}$)', \
 		fontproperties=font_prop)
-	ax.tick_params(axis='x', labelsize=16, bottom=True, top=True, \
+	ax.tick_params(axis='x', labelsize=18, bottom=True, top=True, \
 		labelbottom=True, labeltop=False)
-	ax.tick_params(axis='y', labelsize=16, left=True, right=True, \
+	ax.tick_params(axis='y', labelsize=18, left=True, right=True, \
 		labelleft=True, labelright=False)
-	ax.set_title(prefix, fontproperties=font_prop)
+	# ax.set_title(prefix, fontproperties=font_prop)
 	
-	fig.set_tight_layout(True)
 	plt.savefig(plot_file, dpi=100)  ## set dpi higher for better image resolution
 # 	plt.show()
 	plt.close()
@@ -90,9 +102,9 @@ def main(tab_file, plot_file, prefix):
 ################################################################################
 if __name__ == "__main__":
 	
-	###########################
-	## Parsing input arguments
-	###########################
+	##############################################
+	## Parsing input arguments and calling 'main'
+	##############################################
 	
 	parser = argparse.ArgumentParser(usage="python plot_powerspec.py tab_file \
 [-o plot_file] [-p prefix]", description="Plots a power spectrum from a data \
