@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+"""
+Makes an averaged power spectrum from multiple event-mode data files from RXTE.
+Type "multi_powerspec.py -h" to see command line requirements and options.
+"""
 
 import argparse
 import numpy as np
@@ -10,62 +14,14 @@ from distutils.util import strtobool
 import powerspec as psd  # https://github.com/abigailStev/power_spectra
 import tools  # https://github.com/abigailStev/whizzy_scripts
 
-__author__ = "Abigail Stevens"
-
-"""
-        multi_powerspec.py
-
-Makes an averaged power spectrum from multiple event-mode data files from RXTE.
-Type "multi_powerspec.py -h" to see command line requirements and options.
-
-Abigail Stevens, A.L.Stevens at uva.nl, 2013-2015
-
-"""
-
-################################################################################ 
-def dat_output(out_file, data_file_list, meta_dict, total_exposure, \
-    mean_rate_total, freq, fracrms_power, fracrms_err):
-    """
-            dat_output
-
-    Writes power spectrum to a .dat output file.
-
-    """
-    print "\nOutput sent to %s" % out_file
-
-    with open(out_file, 'w') as out:
-        out.write("#\t\tPower spectrum of multiple data files")
-        out.write("\n# Date(YYYY-MM-DD localtime): %s" % str(datetime.now()))
-        out.write("\n# Data file list: %s" % data_file_list)
-        out.write("\n# Time bin size = %.21f seconds" % meta_dict['dt'])
-        out.write("\n# Number of bins per segment = %d" % meta_dict['n_bins'])
-        out.write("\n# Number of seconds per segment = %d" % \
-                  meta_dict['num_seconds'])
-        out.write("\n# Total number of segments = %d " % meta_dict['num_seg'])
-        out.write("\n# Total exposure time = %d seconds" % total_exposure)
-        out.write("\n# Mean count rate = %.8f" % mean_rate_total)
-        out.write("\n# Nyquist frequency = %.4f" % meta_dict['nyquist'])
-        out.write("\n# ")
-        out.write("\n# Column 1: Frequency [Hz]")
-        out.write("\n# Column 2: Fractional rms normalized mean power")
-        out.write("\n# Column 3: Fractional rms normalized error on the mean "\
-                  "power")
-        out.write("\n# ")
-        for k in range(0, len(fracrms_power)):
-            if freq[k] >= 0:
-                out.write("\n%.8f\t%.8f\t%.8f" % (freq[k], fracrms_power[k],
-                                                  fracrms_err[k]))
-                ## End of if-statement
-            ## End of for-loop
-        ## End of with-block
+__author__ = "Abigail Stevens <A.L.Stevens at uva.nl>"
+__year__ = "2013-2015"
 
 
 ################################################################################
 def fits_output(out_file, data_file_list, meta_dict, freq, fracrms_power, \
         fracrms_err):
     """
-                fits_output
-
     Writes power spectrum to a fits output file.
 
     """
@@ -102,20 +58,15 @@ def fits_output(out_file, data_file_list, meta_dict, freq, fracrms_power, \
     ## If the file already exists, remove it (still working on just updating it)
     assert out_file[-4:].lower() == "fits", "ERROR: Standard output file must "\
         "have extension '.fits'."
-    if os.path.isfile(out_file):
-# 		print "File previously existed. Removing and rewriting."
-        subprocess.call(["rm", out_file])
 
     ## Writing the standard power spectrum to a FITS file
     thdulist = fits.HDUList([prihdu, tbhdu])
-    thdulist.writeto(out_file)
+    thdulist.writeto(out_file, clobber=True)
 
 
 ################################################################################
 def main(infile_list, out_file, num_seconds, dt_mult, test, adjust):
     """
-            main
-
     Reads in one data file at a time, takes FFT of segments of light curve data,
     computes power of each segment, averages power over all segments of all data
     files, writes resulting normalized power spectrum to a file.
@@ -157,8 +108,8 @@ def main(infile_list, out_file, num_seconds, dt_mult, test, adjust):
     df_total = np.array([])
     ellsee_total = psd.Lightcurve()
 
-    meta_dict = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds, \
-                 'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins, \
+    meta_dict = {'dt': dt, 't_res': t_res, 'num_seconds': num_seconds,
+                 'df': df, 'nyquist': nyquist_freq, 'n_bins': n_bins,
                  'detchans': 64, 'adjust_seg': 0, 'exposure': 0}
 
     print "DT = %.15f seconds" % meta_dict['dt']
