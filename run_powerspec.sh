@@ -12,7 +12,7 @@
 ## Notes: bash 3.* and Python 2.7.* (with supporting libraries) must be 
 ##		  installed in order to run this script. 
 ## 
-## Written by Abigail Stevens <A.L.Stevens at uva.nl> 2013-2015
+## Author: Abigail Stevens <A.L.Stevens at uva.nl> 2013-2015
 ## 
 ################################################################################
 
