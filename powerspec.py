@@ -24,7 +24,7 @@ __year__ = "2013-2015"
 
 
 ################################################################################
-def fits_out(out_file, in_file, meta_dict,freq, fracrms_power, fracrms_err,
+def fits_out(out_file, in_file, meta_dict, freq, fracrms_power, fracrms_err,
         leahy_power, file_desc):
     """
     Writes power spectrum to a FITS output file.
@@ -78,14 +78,14 @@ def fits_out(out_file, in_file, meta_dict,freq, fracrms_power, fracrms_err,
     ## Making FITS table for standard power spectrum
     col1 = fits.Column(name='FREQUENCY', unit='Hz', format='E', array=freq)
     col2 = fits.Column(name='POWER', unit='frac rms^2', format='E', \
-        array=fracrms_power)
+            array=fracrms_power)
     col3 = fits.Column(name='ERROR', unit='frac rms^2', format='E', \
-        array=fracrms_err)
+            array=fracrms_err)
     col4 = fits.Column(name='LEAHY', format='E', array=leahy_power)
     cols = fits.ColDefs([col1, col2, col3, col4])
     tbhdu = fits.BinTableHDU.from_columns(cols)
 
-    ## Check that the file has FITS file extension
+    ## Check that the output file name has FITS file extension
     assert out_file[-4:].lower() == "fits", "ERROR: Standard output file must "\
         "have extension '.fits'."
 
@@ -211,13 +211,14 @@ def raw_to_leahy(power, mean_rate, n_bins, dt, noisy):
 ################################################################################
 def var_and_rms(power, df):
     """
-    Computes the variance and RMS (root mean square) of a power spectrum.
+    Computes the variance and rms (root mean square) of a power spectrum.
     Assumes the negative-frequency powers have been removed.
 
     Parameters
     ----------
     power : np.array of floats
-        The raw power at each of the *positive* Fourier frequencies.
+        The absolute rms normalized power at each of the *positive* Fourier
+        frequencies.
 
     df : float
         The step size between Fourier frequencies.
@@ -509,7 +510,7 @@ def fits_in(in_file, meta_dict, print_iterator=int(5), test=False,
 
     start_time = data.field('TIME')[0]
     final_time = data.field('TIME')[-1]
-    end_time = start_time + meta_dict['num_seconds']
+    end_time = start_time + meta_dict['n_seconds']
 
     ## Filter data based on pcu
     if pcu is not None:
@@ -583,13 +584,13 @@ def fits_in(in_file, meta_dict, print_iterator=int(5), test=False,
             rate_1d = None
 
             start_time = end_time
-            end_time += meta_dict['num_seconds']
+            end_time += meta_dict['n_seconds']
 
         ## This next bit deals with gappy data
         elif len(time) == 0:
             print "No counts in this segment."
             start_time = all_time[0]
-            end_time = start_time + meta_dict['num_seconds']
+            end_time = start_time + meta_dict['n_seconds']
 
     return whole_lc, n_seg, exposure, dt_whole, df_whole
 
@@ -652,7 +653,7 @@ def read_and_use_segments(in_file, meta_dict, test=False, chan_filt=None,
 
 
 ################################################################################
-def main(input_file, out_file, num_seconds, dt_mult, test=False, adjust=False,
+def main(input_file, out_file, n_seconds, dt_mult, test=False, adjust=False,
         lo_chan=None, up_chan=None, pcu=None):
     """
     Reads in one data file at a time, takes FFT of segments of light curve data,
@@ -664,7 +665,7 @@ def main(input_file, out_file, num_seconds, dt_mult, test=False, adjust=False,
     ## Idiot checks, to ensure that our assumptions hold
     #####################################################
 
-    assert num_seconds > 0, "ERROR: Number of seconds per segment must be a "\
+    assert n_seconds > 0, "ERROR: Number of seconds per segment must be a "\
             "positive integer."
     assert dt_mult > 0, "ERROR: Multiple of dt must be a positive integer."
 
@@ -697,10 +698,10 @@ def main(input_file, out_file, num_seconds, dt_mult, test=False, adjust=False,
 
     meta_dict = {'dt': dt_mult * t_res,
                  't_res': t_res,
-                 'num_seconds': num_seconds,
-                 'df': 1.0 / float(num_seconds),
+                 'n_seconds': n_seconds,
+                 'df': 1.0 / float(n_seconds),
                  'nyquist': 1.0 / (2.0 * dt_mult * t_res),
-                 'n_bins': num_seconds * int(1.0 / (dt_mult * t_res)),
+                 'n_bins': n_seconds * int(1.0 / (dt_mult * t_res)),
                  'detchans': detchans}
 
     print "\nDT = %f seconds" % meta_dict['dt']
@@ -807,15 +808,18 @@ if __name__ == "__main__":
             "optional arguments, default values are given in brackets at end "\
             "of description.")
 
-    parser.add_argument('infile', help="The full path of the input file with "\
-            "RXTE event-mode data, with time in column 1 and rate in column 2."\
-            " FITS format must have extension .lc or .fits.")
+    parser.add_argument('infile', help="Could be either: 1) The full path of "\
+            "the input file containing an event list: .fits has time in "\
+            "column 1, energy channel in column 2, detector ID in column 3; or"\
+            " .lc has time in column 1 and count rate in column 2; or 2) The "\
+            "full path of the (ASCII/txt) file with a list of the input files"\
+            " (as described in 1). One file per line.")
 
     parser.add_argument('outfile', help="The full path of the .fits file to "\
             "write the frequency and power to.")
 
-    parser.add_argument('-n', '--num_seconds', type=tools.type_power_of_two,
-            default=64, dest='num_seconds', help="Number of seconds in each "\
+    parser.add_argument('-n', '--n_seconds', type=tools.type_power_of_two,
+            default=64, dest='n_seconds', help="Number of seconds in each "\
             "Fourier segment. Must be a power of 2, positive, integer. [64]")
 
     parser.add_argument('-m', '--dt_mult', type=tools.type_power_of_two,
@@ -850,7 +854,7 @@ if __name__ == "__main__":
     if args.test == 1:
         testing = True
 
-    main(args.infile, args.outfile, args.num_seconds, args.dt_mult,
+    main(args.infile, args.outfile, args.n_seconds, args.dt_mult,
             test=testing, adjust=args.adjust, lo_chan=args.lo_energy,
             up_chan=args.up_energy, pcu=args.pcu)
 
