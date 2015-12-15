@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 """
+DEPRECIATED. Absorbed into powerspec.py.
+
 Makes an averaged power spectrum from multiple event-mode data files from RXTE.
 Type "multi_powerspec.py -h" to see command line requirements and options.
 """
@@ -232,7 +234,7 @@ if __name__ == "__main__":
     parser.add_argument('infile_list', help="The full path of the (ASCII/txt) "\
         "file with a list of the input files. One file per line.")
 
-    parser.add_argument('outfile', help="The full path of the (ASCII/txt) "\
+    parser.add_argument('outfile', help="The full path of the FITS "\
         "file to write the frequency and power to.")
 
     parser.add_argument('-n', '--num_seconds', type=tools.type_power_of_two,
