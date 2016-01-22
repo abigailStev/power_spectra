@@ -95,8 +95,43 @@ def flx2xsp_out(rb_out, freq_min, freq_max, rb_freq, rb_rms2, rb_err):
 ################################################################################
 def geometric_rebinning(freq, power, err_power, rebin_const):
     """
-    Re-bins the power spectrum in frequency space by some re-binning constant
+    Re-bin the power spectrum in frequency space by some re-binning constant
     (rebin_const > 1).
+
+    Parameters
+    ----------
+    freq : np.array of floats
+        1-D array of the Fourier frequencies.
+
+    power : np.array of floats
+        1-D array of the power at each Fourier frequency, with any/arbitrary
+        normalization.
+
+    err_power : np.array of floats
+        1-D array of the error on the power at each Fourier frequency, with the
+        same normalization as the power.
+
+    rebin_const : float
+        The constant by which the data were geometrically re-binned.
+
+    Returns
+    -------
+    rb_freq : np.array of floats
+        1-D array of the re-binned Fourier frequencies.
+
+    rb_power : np.array of floats
+        1-D array of the power at the re-binned Fourier frequencies, with the
+        same normalization as the input power array.
+
+    rb_err : np.array of floats
+        1-D array of the error on the power at the re-binned Fourier
+        frequencies, with the same normalization as the input error on power.
+
+    freq_min : np.array of floats
+        1-D array of the lower bounds of each re-binned frequency bin.
+
+    freq_max : np.array of floats
+        1-D array of the upper bounds of each re-binned frequency bin.
 
     """
 
@@ -128,8 +163,8 @@ def geometric_rebinning(freq, power, err_power, rebin_const):
         ## Want mean power of data points contained within one geometric bin
         bin_power = np.mean(power[prev_m:current_m])
         ## Computing error in bin -- equation from Adam Ingram's thesis
-        err_bin_power2 = np.sqrt(np.sum(err_power[prev_m:current_m] ** 2))\
-            / float(bin_range)
+        err_bin_power2 = np.sqrt(np.sum(err_power[prev_m:current_m] ** 2)) / \
+            float(bin_range)
 
         ## Computing the mean frequency of a geometric bin
         bin_freq = np.mean(freq[prev_m:current_m])
@@ -176,7 +211,28 @@ def make_lorfit(rb_freq):
 ################################################################################
 def plot_rb(plot_file, rebin_const, prefix, rb_freq, vpv, err_vpv):
     """
-    Plots the re-binned power spectrum.
+    Plot the re-binned power spectrum.
+
+    Parameters
+    ----------
+    plot_file : str
+        Name of the file to save the plot to.
+
+    rebin_const : float
+        The constant by which the data were geometrically re-binned.
+
+    prefix : str
+        The identifying prefix for the file (data ID or object nickname).
+
+    rb_freq : np.array of floats
+        1-D array of the frequencies of the re-binned power spectrum.
+
+    vpv : np.array of floats
+        1-D array of the power times the frequency of the re-binned power
+        spectrum, i.e., nu * P(nu).
+
+    err_vpv : np.array of floats
+        1-D array of the error on vpv.
 
     """
     print "Re-binned power spectrum: %s" % plot_file
@@ -242,8 +298,8 @@ if __name__ == "__main__":
         "[./psd_rb.png]")
 
     parser.add_argument('-p', '--prefix', required=False, dest='prefix', \
-        default="--", help="The identifying prefix for the file (proposal ID "\
-        "or object nickname). [--]")
+        default="--", help="The identifying prefix for the file (data ID or "\
+        "object nickname). [--]")
 
     parser.add_argument('-c', '--rebin_const', required=False, default=1.01,
         dest='rebin_const', type=type_positive_float, help="The constant by "\
