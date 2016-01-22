@@ -226,10 +226,10 @@ def var_and_rms(power, df):
     Returns
     -------
 
-    float
+    variance : float
         The variance of the power spectrum.
-    float
-        The RMS of the power spectrum.
+    rms : float
+        The rms of the power spectrum.
 
     """
     variance = np.sum(power * df)
@@ -277,7 +277,7 @@ def normalize(power, meta_dict, mean_rate, noisy):
         Description.
 
     rms : float
-        The fractional RMS of the noise-subtracted power spectrum.
+        The fractional rms of the noise-subtracted power spectrum.
 
     """
 
@@ -335,9 +335,21 @@ def normalize(power, meta_dict, mean_rate, noisy):
 ################################################################################
 def make_ps(rate):
     """
-    Computes the mean count rate, the FFT of the count rate minus the mean, and
+    Compute the mean count rate, the FFT of the count rate minus the mean, and
     the power spectrum of this segment of data.
 
+    Parameters
+    ----------
+    rate : np.array of floats
+        1-D array of the count rate of a segment of data.
+
+    Returns
+    -------
+    power_segment : np.array of floats
+        1-D array of the power of the segment.
+
+    mean_rate : float
+        The mean count rate of the segment.
     """
     ## Computing the mean count rate of the segment
     mean_rate = np.mean(rate)
@@ -359,9 +371,27 @@ def make_ps(rate):
 ################################################################################
 def extracted_in(in_file, meta_dict, print_iterator, test):
     """
-    Opens the FITS file light curve (as created in seextrct), reads the count
-    rate for a segment, calls 'make_ps' to create a power spectrum, adds power
-    spectra over all segments.
+    Open the FITS file light curve (as created in seextrct), read the count rate
+    for a segment, call 'make_ps' to create a power spectrum, add power spectra
+    over all segments.
+
+    Parameters
+    ----------
+    in_file : str
+
+    meta_dict : dict
+
+    print_iterator : int
+
+    test : bool
+
+    Returns
+    -------
+    whole_lc : psd_lc.Lightcurves object
+    n_seg : int
+    exposure : float
+    dt_whole : np.array of floats
+    df_whole : np.array of floats
 
     """
 
@@ -473,21 +503,22 @@ def fits_in(in_file, meta_dict, print_iterator=int(5), test=False,
 
     chan_bounds : list of ints
 
+
     pcu : int
 
 
     Returns
     -------
-    whole_lc, n_seg, exposure, dt_whole, df_whole
+    whole_lc
 
-    np.array of floats
-        The sum of the power spectra across the segments.
+    n_seg
 
-    float
-        The count rate of the light curve.
+    exposure
 
-    int
-        Number of segments in this data file.
+    dt_whole
+
+    df_whole
+
 
     """
 
@@ -519,6 +550,7 @@ def fits_in(in_file, meta_dict, print_iterator=int(5), test=False,
 
     ## Filter data based on energy channel (event mode binned energy channel)
     if chan_bounds is not None:
+        # print chan_bounds
         # print np.shape(data)
         lower_bound = data.field('CHANNEL') >= chan_bounds[0]
         data = data[lower_bound]
@@ -542,7 +574,6 @@ def fits_in(in_file, meta_dict, print_iterator=int(5), test=False,
         all_time = all_time[for_next_iteration]
 
         if len(time) > 0:
-            n_seg += 1
             rate_1d = tools.make_1Dlightcurve(time, meta_dict['n_bins'], \
                     start_time, end_time)
             lightcurve = np.concatenate((lightcurve, rate_1d))
@@ -550,10 +581,12 @@ def fits_in(in_file, meta_dict, print_iterator=int(5), test=False,
             power_segment, mean_rate_segment = make_ps(rate_1d)
             assert int(len(power_segment)) == meta_dict['n_bins'], "ERROR: "\
                     "Something went wrong in make_ps. Length of power spectrum"\
-                    " segment  != n_bins."
+                    " segment != n_bins."
 
             dt_seg = (end_time - start_time) / float(meta_dict['n_bins'])
             df_seg = 1.0 / (meta_dict['n_bins'] * dt_seg)
+
+            # print "%.15f" % dt_seg
 
             ## Computing variance and rms of the positive-frequency power in the
             ## reference band. Only keeping segments where the variance > 0.
@@ -563,7 +596,7 @@ def fits_in(in_file, meta_dict, print_iterator=int(5), test=False,
             var, rms = var_and_rms(absrms_pow, df_seg)
 
             if var >= 0.0:
-
+                n_seg += 1
                 whole_lc.power += power_segment
                 whole_lc.mean_rate += mean_rate_segment
                 exposure += end_time - start_time
@@ -577,6 +610,8 @@ def fits_in(in_file, meta_dict, print_iterator=int(5), test=False,
                 if test and (n_seg == 1):  # Testing
                     np.savetxt('tmp_lightcurve.dat', lightcurve, fmt='%d')
                     break
+            else:
+                print "bad segment"
             ## Clearing variables from memory
             time = None
             power_segment = None
@@ -596,13 +631,38 @@ def fits_in(in_file, meta_dict, print_iterator=int(5), test=False,
 
 
 ################################################################################
-def read_and_use_segments(in_file, meta_dict, test=False, chan_filt=None,
+def read_and_use_segments(in_file, meta_dict, test=False, chan_bounds=None,
         pcu=None):
     """
     Opens the file, reads in the count rate, calls 'make_ps' to create a
     power spectrum. Separated from main body like this so I can easily call it
     in multi_powerspec.py. Split into 'fits_in' and 'extracted_in' for easier
     readability.
+
+    Parameters
+    ----------
+    in_file : str
+
+    meta_dict : dict
+
+    test : bool
+
+    chan_bounds : bool
+
+    pcu : int
+
+
+    Returns
+    -------
+    whole_lc
+
+    n_seg
+
+    exposure
+
+    dt_whole
+
+    df_whole
 
     """
     assert tools.power_of_two(meta_dict['n_bins']) , "ERROR: n_bins must be a "\
@@ -630,11 +690,11 @@ def read_and_use_segments(in_file, meta_dict, test=False, chan_filt=None,
     ## and so it's already populated as a light curve
     if ".fits" in in_file:
         whole_lc, n_seg, exposure, dt_whole, df_whole = fits_in(in_file,
-                meta_dict, print_iterator=print_iterator, test=test)
-                # chan_filt=chan_filt, pcu=pcu)
+                meta_dict, print_iterator=print_iterator, test=test,
+                chan_bounds=chan_bounds, pcu=pcu)
 
     elif ".lc" in in_file:
-        if chan_filt is not None:
+        if chan_bounds is not None:
             raise Warning("Not able to filter on energy channel for an .lc"\
                     "file at this stage, since energy channel "\
                     "information is not given.")
@@ -659,6 +719,26 @@ def main(input_file, out_file, n_seconds, dt_mult, test=False, adjust=False,
     Reads in one data file at a time, takes FFT of segments of light curve data,
     computes power of each segment, averages power over all segments of all data
     files, writes resulting normalized power spectrum to a file.
+
+    Parameters
+    ----------
+    input_file : str
+
+    out_file : str
+
+    n_second : int
+
+    dt_mult : int
+
+    test : bool
+
+    adjust : bool
+
+    lo_chan : int
+
+    up_chan : int
+
+    pcu : int
 
     """
     #####################################################
@@ -710,17 +790,19 @@ def main(input_file, out_file, n_seconds, dt_mult, test=False, adjust=False,
     print "Testing?", test
     print "Adjusting QPO?", adjust
 
-    # if lo_chan is not None:
-    #     if up_chan is not None:
-    #         assert lo_chan <= up_chan, "ERROR: lo_energy ! <= up_energy"
-    #         chan_bounds = [lo_chan, up_chan]
-    #
-    #     else:
-    #         chan_bounds = [lo_chan, detchans-1]
-    #
-    # else:
-    #     if up_chan is not None:
-    #         chan_bounds = [0, up_chan]
+    if lo_chan is not None:
+        if up_chan is not None:
+            assert lo_chan <= up_chan, "ERROR: lo_energy ! <= up_energy"
+            chan_bounds = [lo_chan, up_chan]
+
+        else:
+            chan_bounds = [lo_chan, detchans-1]
+
+    else:
+        if up_chan is not None:
+            chan_bounds = [0, up_chan]
+        else:
+            chan_bounds = None
 
     total_seg = 0
     total_exposure = 0
@@ -737,7 +819,8 @@ def main(input_file, out_file, n_seconds, dt_mult, test=False, adjust=False,
         meta_dict['adjust_seg'] = adj_seg
 
         whole_lc, n_seg, exposure, dt_whole, \
-                df_whole = read_and_use_segments(in_file, meta_dict, test=test)
+                df_whole = read_and_use_segments(in_file, meta_dict, test=test,
+                chan_bounds=chan_bounds, pcu=pcu)
 
         print "Segments for this file: %d\n" % n_seg
 
@@ -757,8 +840,12 @@ def main(input_file, out_file, n_seconds, dt_mult, test=False, adjust=False,
     total.power /= float(meta_dict['n_seg'])
     total.mean_rate /= float(meta_dict['n_seg'])
 
+
+    print np.shape(total.power)
     meta_dict['exposure'] = total_exposure
     meta_dict['mean_rate'] = total.mean_rate
+    meta_dict['dt'] = np.mean(dt_total)
+    meta_dict['df'] = np.mean(df_total)
     print "Total exposure time =", meta_dict['exposure']
     print "Total segments =", meta_dict['n_seg']
     print "Mean rate total =", meta_dict['mean_rate']
