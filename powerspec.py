@@ -251,34 +251,6 @@ def fits_out(out_file, in_file, meta_dict, freq, fracrms_power, fracrms_err,
     assert error if the file extension is not ".fits"
     """
 
-    # ## Make header for standard power spectrum
-    # prihdr = fits.Header()
-    # prihdr.set('TYPE', file_desc)
-    # prihdr.set('DATE', str(datetime.now()), "YYYY-MM-DD localtime")
-    # prihdr.set('EVTLIST', in_file)
-    # prihdr.set('DT', meta_dict['dt'], "seconds")
-    # prihdr.set('N_BINS', meta_dict['n_bins'], "time bins per segment")
-    # prihdr.set('SEGMENTS', meta_dict['n_seg'], "segments in the whole light "\
-    #     "curve")
-    # prihdr.set('EXPOSURE', meta_dict['exposure'], "seconds of data used")
-    # prihdr.set('DETCHANS', meta_dict['detchans'], "Number of detector energy "\
-    #     "channels")
-    # prihdr.set('RMS', meta_dict['rms'], "Fractional rms of noise-sub PSD.")
-    # prihdr.set('MEANRATE', meta_dict['mean_rate'], "cts/s")
-    # prihdr.set('NYQUIST', meta_dict['nyquist'], "Hz")
-    # prihdu = fits.PrimaryHDU(header=prihdr)
-    #
-    # ## Make FITS table for standard power spectrum
-    # col1 = fits.Column(name='FREQUENCY', unit='Hz', format='E', array=freq)
-    # col2 = fits.Column(name='POWER', unit='frac rms^2', format='E', \
-    #         array=fracrms_power)
-    # col3 = fits.Column(name='ERROR', unit='frac rms^2', format='E', \
-    #         array=fracrms_err)
-    # col4 = fits.Column(name='LEAHY', format='E', array=leahy_power)
-    # cols = fits.ColDefs([col1, col2, col3, col4])
-    # tbhdu = fits.BinTableHDU.from_columns(cols)
-
-
     ## Check that the output file name has FITS file extension
     assert out_file[-4:].lower() == "fits", "ERROR: Output file must have "\
             "extension '.fits'."
@@ -458,7 +430,7 @@ def var_and_rms(power, df):
 
 
 ################################################################################
-def normalize(power, meta_dict, mean_rate, noisy):
+def normalize(power, meta_dict, mean_rate, noisy=True):
     """
     Generate the Fourier frequencies, remove negative frequencies, normalize
     the power by Leahy and fractional rms^2 normalizations, and compute the
@@ -467,36 +439,40 @@ def normalize(power, meta_dict, mean_rate, noisy):
     Parameters
     ----------
     power : np.array of floats
-        Description.
+        1-D array of the raw power at each fourier frequency.
 
     meta_dict : dict
         Control parameters for the data analysis.
 
     mean_rate : float
-        Description.
+        The mean count rate of the light curve.
 
-    noisy : boolean
-        Description
+    noisy : bool
+        If True, data is real and Poisson noise level will be subtracted. Set to
+        False if applying this function to a simulated data set without noise.
+        Default = True.
 
     Returns
     -------
     freq : np.array of floats
-        Description.
+        1-D array of the Fourier frequencies.
 
     power : np.array of floats
-        Description.
+        1-D array of the raw power at each Frequency.
 
     leahy_power : np.array of floats
-        Description.
+        1-D array of the Leahy-normalized power at each Fourier frequency.
 
     fracrms_power : np.array of floats
-        Description.
+        1-D array of the fractional rms^2-normalized power at each Fourier
+        frequency.
 
     fracrms_err : np.array of floats
-        Description.
+        1-D array of the fractional rms^2-normalized error on the power at each
+        Fourier frequency.
 
     rms : float
-        The fractional rms of the noise-subtracted power spectrum.
+        The integrated fractional rms of the noise-subtracted power spectrum.
 
     """
 
@@ -511,7 +487,7 @@ def normalize(power, meta_dict, mean_rate, noisy):
         ## pos and neg, and we want it pos here.
     power = power[0:nyq_index + 1]
 
-    ## Computing the error on the mean power
+    ## Compute the error on the mean power
     err_power = power / np.sqrt(float(meta_dict['n_seg']))
 
     ## Absolute rms^2 normalization
