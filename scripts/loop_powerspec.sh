@@ -17,7 +17,7 @@
 ##		  ImageMagick must be installed (open source, available on e.g. MacPorts 
 ##		  and HomeBrew)
 ## 
-## Author: Abigail Stevens <A.L.Stevens at uva.nl>, 2015-2016
+## Author: Abigail Stevens <A.L.Stevens at uva.nl> 2015
 ## 
 ################################################################################
 
@@ -35,20 +35,18 @@ fi
 home_dir=$(ls -d ~)
 
 exe_dir="$home_dir/Dropbox/Research/power_spectra"
+out_dir="$exe_dir/out_ps"
 
-#prefix="GX339-BQPO"
-prefix="4U1630-BQPO"
-
-out_dir="$exe_dir/out_ps/${prefix}"
+prefix="GX339-BQPO"
 
 day=$(date +%y%m%d)  # make the date a string and assign it to 'day'
 
 numsec=64
 dt=64
-testing=0    ## 0 for no, 1 for yes
+testing=1    ## 0 for no, 1 for yes
 rebin_const=1.01
 
-evtlist_list="$home_dir/Dropbox/Lists/${prefix}_eventlist.lst"
+obsID_list="$home_dir/Dropbox/Lists/${prefix}_obsIDs.lst"
 
 plot_list="$out_dir/${prefix}_giflist.txt"
 rb_plot_list="$out_dir/${prefix}_giflist_rb.txt"
@@ -69,7 +67,10 @@ if [ -e "$qpofit_file" ]; then rm "$qpofit_file"; fi; touch "$qpofit_file"
 ## Looping through obsIDs
 ##########################
 
-for in_file in $( cat $evtlist_list ); do
+for obsID in $( cat $obsID_list ); do
+
+	in_dir="$home_dir/Reduced_data/$prefix/$obsID"
+	in_file="$in_dir/GTId_eventlist.fits"
 		
 	if [ ! -d "$out_dir" ]; then mkdir -p "$out_dir"; fi
 
@@ -122,7 +123,7 @@ for in_file in $( cat $evtlist_list ); do
 	
 		echo "${rb_plot}.${p_ext}" >> ${rb_plot_list}
 		
-		python fit_qpo.py "${rb_out_file}.fits" --mod L --prefix "$prefix"
+		python fit_qpo.py "${rb_out_file}.fits" --mod G --prefix "$prefix"
 		
 	else
 		echo -e "\tERROR: Plots were not made. Power spectrum output file does"\
@@ -135,9 +136,9 @@ for in_file in $( cat $evtlist_list ); do
 	fi
 
 done
-#echo "$qpofit_file"
+echo "$qpofit_file"
 
-open -a "TextWrangler" "$qpofit_file"
+#open -a "TextWrangler" "$qpofit_file"
 #############################################
 ## Make a gif of the plots using ImageMagick
 #############################################
@@ -146,17 +147,17 @@ echo -e "\nGIF lists:"
 echo -e "\t${plot_list}"
 echo -e "\t${rb_plot_list}\n"
 
- convert @"${plot_list}" "${gif_name}"
- if [ -e "${gif_name}" ]; then
- 	echo "GIF made! ${gif_name}"
- 	open "${gif_name}"
- fi
-
- convert @"${rb_plot_list}" "${rb_gif_name}"
- if [ -e "${rb_gif_name}" ]; then
- 	echo "GIF made! ${rb_gif_name}"
- 	open "${rb_gif_name}"
- fi
+# convert @"${plot_list}" "${gif_name}"
+# if [ -e "${gif_name}" ]; then
+# 	echo "GIF made! ${gif_name}"
+# 	open "${gif_name}"
+# fi
+# 
+# convert @"${rb_plot_list}" "${rb_gif_name}"
+# if [ -e "${rb_gif_name}" ]; then
+# 	echo "GIF made! ${rb_gif_name}"
+# 	open "${rb_gif_name}"
+# fi
 
 ################################################################################
 ## All done!
