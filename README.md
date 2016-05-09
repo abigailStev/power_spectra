@@ -14,6 +14,15 @@ into [Stingray](https://github.com/StingraySoftware)!
 Fits a QPO in a re-binned power spectrum. Uses either a Gaussian and a power law
 or a Lorentzian and a power law (specified on the command line). 
 
+### power_spectra/plot_multi_psds.py
+Hacky script to plot three power spectra together on one plot.
+
+### power_spectra/plot_powerspec.py
+Linearly plots a power spectrum and saves the plot.
+
+### power_spectra/psd_lightcurves.py
+Classes for light curves and power spectra.
+
 ### power_spectra/powerspec.py
 Makes a power spectrum for a light curve. Reads in a filtered event list from a
 FITS or ASCII/txt/dat file, 'populates' each light curve segment, takes power 
@@ -27,8 +36,13 @@ Re-bins the power spectrum by frequency by a specified re-binning constant.
 Saves the re-binned power spectrum to a file, plots it logarithmically, and 
 saves the plot.
 
-### scripts/plot_powerspec.py
-Linearly plots a power spectrum and saves the plot.
+### scripts/loop_powerspec.sh
+Loops through a list of eventlists, making a power spectrum for each, and makes
+a gif of them at the end.
+
+### scripts/run_powerspec.sh
+A bash script to run all the code: powerspec.py, rebin_powerspec.py, 
+plot_powerspec.py, and fit_qpo.py.
 
 ### scripts/TimmerKoenig.ipynb
 An iPython notebook that does a Timmer & Koenig simulation of a time series with
