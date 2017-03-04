@@ -5,7 +5,9 @@ timing data. Intended to be used with event-mode RXTE data.
 Note that 'tools.py' is in the repo 'whizzy_scripts'.
 
 Disclaimer -- There is no plan to develop and maintain this code. Please look 
-into [Stingray](https://github.com/StingraySoftware)!
+into [Stingray](https://StingraySoftware.github.io)!
+
+(I don't think the packaging for this software works.)
 
 
 ## Contents
@@ -50,13 +52,13 @@ a specific power spectrum, makes it into a light curve with or without Poisson
 noise, and converts back to a power spectrum. Makes many plots. Used for testing
 and learning.
 
- [![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/) 
+[![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)
  
-## Authors and License
+## Authors
 * Abigail Stevens (UvA API)
 
-Pull requests are welcome!
+## Copyright
 
-All code is Copyright 2013-2016 The Authors, and is distributed under the MIT 
+All content © 2014-2017 the Authors, and is distributed under the MIT
 Licence. See LICENSE for details.
 
